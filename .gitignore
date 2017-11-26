@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+# QT stuff
+*.user
+*.user*
+*.moc
