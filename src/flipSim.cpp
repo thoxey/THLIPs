@@ -38,15 +38,23 @@ void FlipSim::step(float dt)
         //Calculate our substep
         float subStep = cfl();
 
+        //Per cell
+//        sample();
+//        {
+//            updateGrid();
+//        }
+
+
+        //Per cell
+        project();
+
+        //Per particle
         //advect the velocity field
         advectVelocityField();
 
-        //
+        //Add gravity and stuff
+        //Per particle calculation
         addBodyForce();
-
-        //
-        project();
-
 
         t += subStep;
     }

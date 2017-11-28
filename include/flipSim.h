@@ -6,6 +6,7 @@
 struct Particle
 {
     glm::vec3 position;
+    glm::vec3 velocity;
 };
 class FlipSim
 {
