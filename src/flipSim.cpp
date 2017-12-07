@@ -12,6 +12,92 @@ void FlipSim::initGrid()
 
 }
 
+void FlipSim::updateGrid()
+{
+    for(MG_Cell c : m_MACGrid.m_cells)
+        c.layer = -1;
+    /*
+      // update cells that currently have fluid in them
+      for each marker particle, P
+        if the cell, C, containing the center of P does not exist
+            if C is within the simulation bounds
+                create C and put it in the hash table
+                set the cell type of C to “fluid”
+                C.layer = 0
+        else if C is not part of a solid object
+            Set the cell type for C to “fluid”
+            C.layer = 0
+    */
+    for(MG_Particle p : m_MACGrid.m_particles)
+    {
+        MG_Cell c;
+        if(p.cellidx < m_MACGrid.m_cells.size())
+            c = m_MACGrid.m_cells[p.cellidx];
+        if(!checkForCell(p))
+        {
+            if(m_MACGrid.checkInBounds(c))
+            {
+                //Create new cell c
+                c.type = FLUID;
+                c.layer = 0;
+            }
+        }
+        else if(c.type != SOLID)
+        {
+            c.type = FLUID;
+            c.layer = 0;
+        }
+    }
+
+    /*
+    // create a buffer zone around the fluid
+    for i = 1 to max(2, ⌈kc f l ⌉)
+        for each liquid or air cell, C, such that C.layer == i−1
+            for each of the six neighbors of C, N if N already exists in the hash table
+                if N.layer == −1 and N is not solid
+                    set the cell type of N to “air”
+                    N.layer = i
+                else
+                    create N and put it in the hash table
+                    N.layer = i
+                    if N is in the simulation bounds
+                        set the cell type of N to “air”
+                    else
+                        set the cell type of N to “solid”
+
+    delete any cells with layer == −1
+     */
+    for(int i = 0; std::max(2, (int)std::ceil(m_k_cfl)); i++)
+    {
+        std::vector<MG_Cell> neighbors = m_MACGrid.getNeighbors();
+        for(MG_Cell neighbor : neighbors)
+        {
+            if(true)//if N exists in the hash table
+            {
+                if(neighbor.layer == -1 && neighbor.type != SOLID)
+                {
+                    neighbor.type = AIR;
+                    neighbor.layer = i;
+                }
+            }
+            else
+            {
+                //Create neighbor
+                neighbor.layer = i;
+                if(m_MACGrid.checkInBounds(neighbor))
+                {
+                    neighbor.type = AIR;
+                }
+                else
+                {
+                    neighbor.type = SOLID;
+                }
+            }
+        }
+    }
+
+    //delet any cells with layer == -1
+}
 
 void FlipSim::step(float dt)
 {
@@ -38,11 +124,8 @@ void FlipSim::step(float dt)
         //Calculate our substep
         float subStep = cfl();
 
-        //Per cell
-//        sample();
-//        {
-//            updateGrid();
-//        }
+        updateGrid();
+
 
 
         //Per cell
@@ -80,7 +163,14 @@ void FlipSim::project()
 
 }
 
+bool FlipSim::checkForCell(MG_Particle _p)
+{
+    return false;
+}
+
 float FlipSim::cfl()
 {
-    return 0.0f;
+    float ret = 0.0f;
+    ret = m_MACGrid.h/m_MACGrid.getMaxSpeed();
+    ret *= m_k_cfl;
 }

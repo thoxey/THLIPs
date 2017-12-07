@@ -12,5 +12,7 @@ HEADERS  += $$PWD/include/*.h
 
 INCLUDEPATH += $$PWD/include/
 
+INCLUDEPATH += /usr/local/include
+
 OBJECTS_DIR=   $$PWD/obj
 
