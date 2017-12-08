@@ -85,7 +85,20 @@ float MACGrid::getInterpolatedValue(glm::vec3 _v, unsigned int idx)
            (_v.x - i) * (_v.y - j) * (_v.z - k) * getCell(i+1, j+1, k+1).velField[idx];
 }
 
+
+
 MG_Cell MACGrid::getCell(unsigned int _i, unsigned int _j, unsigned int _k)
 {
-    return MG_Cell();
+    std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_i,_j,_k));
+    return ret->second;
+}
+
+unsigned int MACGrid::generateKey(unsigned int _i, unsigned int _j, unsigned int _k)
+{
+    return 541*_i+79*_j+31*_k;
+}
+
+void MACGrid::insertCellInHashTable(MG_Cell _c)
+{
+    m_hashTable.emplace(_c.key, _c);
 }

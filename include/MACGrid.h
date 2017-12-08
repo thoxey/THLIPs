@@ -21,9 +21,12 @@ struct MG_Cell
 
     cellType type;
 
+    unsigned int key;
+
     MG_Cell(glm::uvec3 _pos, glm::vec3 _velField, float _p)
     {
         gridPos = _pos;
+        key = 541*_pos.x+79*_pos.y+31*_pos.z;
 
         velField = _velField;
 
@@ -45,10 +48,6 @@ struct MG_Particle
     unsigned int cellidx;
 };
 
-struct MG_Key
-{
-    unsigned int i,j,k;
-};
 
 class MACGrid
 {
@@ -56,7 +55,7 @@ public:
     std::vector<MG_Cell> m_cells;
     std::vector<MG_Particle> m_particles;
 
-    //std::unordered_map<MG_Key, MG_Cell> m_hashTable;
+    std::unordered_map<int, MG_Cell> m_hashTable;
 
     std::vector<MG_Cell> getNeighbors();
 
@@ -71,6 +70,10 @@ public:
     float getInterpolatedValue(glm::vec3 _v, unsigned int idx);
 
     MG_Cell getCell(unsigned int _i, unsigned int _j, unsigned int _k);
+
+    unsigned int generateKey(unsigned int _i, unsigned int _j, unsigned int _k);
+
+    void insertCellInHashTable(MG_Cell _c);
 
     //Width, using notaion from H&W paper
     float h;
