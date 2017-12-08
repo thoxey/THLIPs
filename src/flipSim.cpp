@@ -14,6 +14,7 @@ void FlipSim::initGrid()
 
 void FlipSim::updateGrid()
 {
+
     for(MG_Cell c : m_MACGrid.m_cells)
         c.layer = -1;
     /*
@@ -33,7 +34,7 @@ void FlipSim::updateGrid()
         MG_Cell c;
         if(p.cellidx < m_MACGrid.m_cells.size())
             c = m_MACGrid.m_cells[p.cellidx];
-        if(!checkForCell(p))
+        if(!m_MACGrid.checkForCell(p))
         {
             if(m_MACGrid.checkInBounds(c))
             {
@@ -96,7 +97,12 @@ void FlipSim::updateGrid()
         }
     }
 
-    //delet any cells with layer == -1
+    //delete any cells with layer == -1
+}
+
+void FlipSim::calculatePressure()
+{
+
 }
 
 void FlipSim::step(float dt)
@@ -163,10 +169,6 @@ void FlipSim::project()
 
 }
 
-bool FlipSim::checkForCell(MG_Particle _p)
-{
-    return false;
-}
 
 float FlipSim::cfl()
 {

@@ -17,11 +17,12 @@ private:
     void initGrid();
 
     void updateGrid();
+    void calculatePressure();
     void advectVelocityField();
     void addBodyForce();
     void project();
 
-    bool checkForCell(MG_Particle _p);
+
 
     float cfl();
 

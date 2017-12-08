@@ -3,6 +3,7 @@
 
 #include<vector>
 #include<unordered_map>
+#include<cmath>
 
 #include<glm/vec3.hpp>
 
@@ -52,6 +53,10 @@ struct MG_Particle
 class MACGrid
 {
 public:
+
+    MACGrid(glm::uvec3 _size);
+    MACGrid(unsigned int _i, unsigned int _j, unsigned int _k);
+
     std::vector<MG_Cell> m_cells;
     std::vector<MG_Particle> m_particles;
 
@@ -70,16 +75,24 @@ public:
     float getInterpolatedValue(glm::vec3 _v, unsigned int idx);
 
     MG_Cell getCell(unsigned int _i, unsigned int _j, unsigned int _k);
+    MG_Cell getCell(glm::uvec3 _pos);
 
     unsigned int generateKey(unsigned int _i, unsigned int _j, unsigned int _k);
+    unsigned int generateKey(glm::uvec3 _pos);
+
+    bool checkForCell(unsigned int _i, unsigned int _j, unsigned int _k);
+    bool checkForCell(glm::uvec3 _pos);
+    bool checkForCell(MG_Particle _p);
 
     void insertCellInHashTable(MG_Cell _c);
+
+
 
     //Width, using notaion from H&W paper
     float h;
 
 private:
-    int m_i_length, m_j_length, m_k_length;
+    unsigned int m_i_length, m_j_length, m_k_length;
 
 
 };

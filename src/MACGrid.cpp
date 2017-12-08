@@ -1,5 +1,19 @@
 #include "MACGrid.h"
 
+MACGrid::MACGrid(glm::uvec3 _size)
+{
+    m_i_length = _size.x;
+    m_j_length = _size.y;
+    m_k_length = _size.y;
+}
+
+MACGrid::MACGrid(unsigned int _i, unsigned int _j, unsigned int _k)
+{
+    m_i_length = _i;
+    m_j_length = _j;
+    m_k_length = _k;
+}
+
 std::vector<MG_Cell> MACGrid::getNeighbors()
 {
     return std::vector<MG_Cell>();
@@ -75,9 +89,10 @@ float MACGrid::getInterpolatedValue(glm::vec3 _v, unsigned int idx)
     int j = std::floor(_v.y);
     int k = std::floor(_v.z);
 
+    //I've tripled checked, but come back here if there are mistakes
     return (i+1-_v.x) * (j+1-_v.y) * (k+1-_v.z) * getCell(i, j, k).velField[idx] +
            (_v.x - i) * (j+1 - _v.y) * (k+1-_v.z) * getCell(i+1, j, k).velField[idx] +
-           (i+1-_v.x) * (_v.y - j) * (k+1-_v.z) * getCell(i, j, k).velField[idx] +
+           (i+1-_v.x) * (_v.y - j) * (k+1-_v.z) * getCell(i, j+1, k).velField[idx] +
            (_v.x - i) * (_v.y - j) * (k+1-_v.z) * getCell(i+1, j+1, k).velField[idx] +
            (i+1 - _v.x) * (j+1 - _v.y) * (_v.z - k) * getCell(i, j, k+1).velField[idx] +
            (_v.x - i) * (j+1 - _v.y) * (_v.z - k) * getCell(i+1, j, k+1).velField[idx] +
@@ -85,11 +100,39 @@ float MACGrid::getInterpolatedValue(glm::vec3 _v, unsigned int idx)
            (_v.x - i) * (_v.y - j) * (_v.z - k) * getCell(i+1, j+1, k+1).velField[idx];
 }
 
+bool MACGrid::checkForCell(unsigned int _i, unsigned int _j, unsigned int _k)
+{
+    std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_i,_j,_k));
+    if(ret == m_hashTable.end())
+        return false;
+    else
+        return true;
 
+}
+
+bool MACGrid::checkForCell(glm::uvec3 _pos)
+{
+    std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_pos.x,_pos.y,_pos.z));
+    if(ret == m_hashTable.end())
+        return false;
+    else
+        return true;
+}
+
+bool MACGrid::checkForCell(MG_Particle _p)
+{
+    return true;
+}
 
 MG_Cell MACGrid::getCell(unsigned int _i, unsigned int _j, unsigned int _k)
 {
     std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_i,_j,_k));
+    return ret->second;
+}
+
+MG_Cell MACGrid::getCell(glm::uvec3 _pos)
+{
+    std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_pos.x,_pos.y,_pos.z));
     return ret->second;
 }
 
