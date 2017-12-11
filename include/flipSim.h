@@ -5,6 +5,7 @@
 #include<cmath>
 
 #include<glm/vec3.hpp>
+#include<eigen3/Eigen/Sparse>
 
 #include "MACGrid.h"
 
@@ -18,6 +19,7 @@ private:
 
     void updateGrid();
     void calculatePressure();
+    void solvePressure();
     void advectVelocityField();
     void addBodyForce();
     void project();
@@ -26,7 +28,7 @@ private:
 
     float cfl();
 
-
+    typedef Eigen::SparseMatrix<unsigned char> SpMat;
 
     MACGrid m_MACGrid;
 

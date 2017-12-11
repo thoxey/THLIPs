@@ -102,7 +102,67 @@ void FlipSim::updateGrid()
 
 void FlipSim::calculatePressure()
 {
+    SpMat pressureMat(m_MACGrid.m_cells.size(), m_MACGrid.m_cells.size());
 
+}
+
+void FlipSim::solvePressure()
+{
+    for(unsigned int k = 0; k < m_kSize; k++)
+        for(unsigned int j = 0; j < m_jSize; j++)
+            for(unsigned int i = 0; i < m_iSize; i++)
+            {
+                //Update u
+                if(m_MACGrid.getCell(i-1, j, k).type == FLUID || m_MACGrid.getCell(i, j, k).type == FLUID)
+                {
+                    if(m_MACGrid.getCell(i-1, j, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID)
+                    {
+                        //u(i,j,k) = uSolid(i,j,k)
+                    }
+                    else
+                    {
+                        //u(i,j,k) -= scale * (p(i,j,k) - p(i-1,j,k))
+                    }
+                }
+                else
+                {
+                    //mark u(i,j,k) as unknown
+                }
+
+                //update v
+                if(m_MACGrid.getCell(i, j-1, k).type == FLUID || m_MACGrid.getCell(i, j, k).type == FLUID)
+                {
+                    if(m_MACGrid.getCell(i, j-1, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID)
+                    {
+                        //v(i,j,k) = vSolid(i,j,k)
+                    }
+                    else
+                    {
+                        //v(i,j,k) -= scale * (p(i,j,k) - p(i,j-1,k))
+                    }
+                }
+                else
+                {
+                    //mark v(i,j,k) as unknown
+                }
+                //update w
+                //update v
+                if(m_MACGrid.getCell(i, j, k-1).type == FLUID || m_MACGrid.getCell(i, j, k).type == FLUID)
+                {
+                    if(m_MACGrid.getCell(i, j, k-1).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID)
+                    {
+                        //w(i,j,k) = wSolid(i,j,k)
+                    }
+                    else
+                    {
+                        //w(i,j,k) -= scale * (p(i,j,k) - p(i,j,k-1))
+                    }
+                }
+                else
+                {
+                    //mark w(i,j,k) as unknown
+                }
+            }
 }
 
 void FlipSim::step(float dt)
@@ -174,5 +234,5 @@ float FlipSim::cfl()
 {
     float ret = 0.0f;
     ret = m_MACGrid.h/m_MACGrid.getMaxSpeed();
-    ret *= m_k_cfl;
+    return ret * m_k_cfl;
 }
