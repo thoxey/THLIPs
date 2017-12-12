@@ -70,28 +70,34 @@ void FlipSim::updateGrid()
      */
     for(int i = 0; std::max(2, (int)std::ceil(m_k_cfl)); i++)
     {
-        std::vector<MG_Cell> neighbors = m_MACGrid.getNeighbors();
-        for(MG_Cell neighbor : neighbors)
+        for(MG_Cell c : m_MACGrid.m_cells)
         {
-            if(true)//if N exists in the hash table
+            if(c.layer != -1)
+                continue;
+
+            std::vector<MG_Cell> neighbors = m_MACGrid.getNeighbors(c);
+            for(MG_Cell neighbor : neighbors)
             {
-                if(neighbor.layer == -1 && neighbor.type != SOLID)
+                if(true)//if N exists in the hash table
                 {
-                    neighbor.type = AIR;
-                    neighbor.layer = i;
-                }
-            }
-            else
-            {
-                //Create neighbor
-                neighbor.layer = i;
-                if(m_MACGrid.checkInBounds(neighbor))
-                {
-                    neighbor.type = AIR;
+                    if(neighbor.layer == -1 && neighbor.type != SOLID)
+                    {
+                        neighbor.type = AIR;
+                        neighbor.layer = i;
+                    }
                 }
                 else
                 {
-                    neighbor.type = SOLID;
+                    //Create neighbor
+                    neighbor.layer = i;
+                    if(m_MACGrid.checkInBounds(neighbor))
+                    {
+                        neighbor.type = AIR;
+                    }
+                    else
+                    {
+                        neighbor.type = SOLID;
+                    }
                 }
             }
         }
@@ -99,27 +105,65 @@ void FlipSim::updateGrid()
 
     //delete any cells with layer == -1
 }
-
 void FlipSim::calculatePressure()
 {
-    SpMat pressureMat(m_MACGrid.m_cells.size(), m_MACGrid.m_cells.size());
+    using namespace Eigen;
+    {
+        //Sum up the fluid cells
+        uint n_fluidCells = 0;
+        for(MG_Cell c : m_MACGrid.m_cells)
+            if(c.type == FLUID)
+                n_fluidCells++;
+
+
+        SparseMatrix<int> pressureMat(n_fluidCells, n_fluidCells);
+        pressureMat.reserve(VectorXi::Constant(6, n_fluidCells));
+
+        VectorX divergence(n_fluidCells);
+
+        uint length = m_MACGrid.m_cells.size();
+        for(MG_Cell c : m_MACGrid.m_cells)
+        {
+            int p = 6;
+            std::vector<MG_Cell> neighbors = m_MACGrid.getNeighbors(c);
+            for(MG_Cell neighbor : neighbors)
+            {
+                int nidx = getIndex(length, neighbor);
+                if(neighbor.type != SOLID)
+                    pressureMat.insert(nidx, nidx) = -1;
+                else
+                    p--;
+            }
+            uint i = getIndex(length, c);
+            pressureMat.insert(i,i) = p;
+        }
+
+        //A sparse solver: time and/or sanity saver
+        SimplicialLLT<SparseMatrix<int>> solver;
+        //To store the result in
+        VectorX x(n_fluidCells);
+
+        solver.compute(pressureMat);
+        //Commented out for now, causes error poss bc it is empty?
+        //x = solver.solve(divergence);
+
+    }
 
 }
 
-void FlipSim::solvePressure()
+void FlipSim::applyPressure()
 {
-    for(unsigned int k = 0; k < m_kSize; k++)
-        for(unsigned int j = 0; j < m_jSize; j++)
-            for(unsigned int i = 0; i < m_iSize; i++)
+    for(uint k = 0; k < m_kSize; k++)
+        for(uint j = 0; j < m_jSize; j++)
+            for(uint i = 0; i < m_iSize; i++)
             {
+                real x = 0.0;
+                real y = 0.0;
+                real z = 0.0;
                 //Update u
                 if(m_MACGrid.getCell(i-1, j, k).type == FLUID || m_MACGrid.getCell(i, j, k).type == FLUID)
                 {
-                    if(m_MACGrid.getCell(i-1, j, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID)
-                    {
-                        //u(i,j,k) = uSolid(i,j,k)
-                    }
-                    else
+                    if(!(m_MACGrid.getCell(i-1, j, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))
                     {
                         //u(i,j,k) -= scale * (p(i,j,k) - p(i-1,j,k))
                     }
@@ -132,11 +176,7 @@ void FlipSim::solvePressure()
                 //update v
                 if(m_MACGrid.getCell(i, j-1, k).type == FLUID || m_MACGrid.getCell(i, j, k).type == FLUID)
                 {
-                    if(m_MACGrid.getCell(i, j-1, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID)
-                    {
-                        //v(i,j,k) = vSolid(i,j,k)
-                    }
-                    else
+                    if(!(m_MACGrid.getCell(i, j-1, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))
                     {
                         //v(i,j,k) -= scale * (p(i,j,k) - p(i,j-1,k))
                     }
@@ -149,11 +189,7 @@ void FlipSim::solvePressure()
                 //update v
                 if(m_MACGrid.getCell(i, j, k-1).type == FLUID || m_MACGrid.getCell(i, j, k).type == FLUID)
                 {
-                    if(m_MACGrid.getCell(i, j, k-1).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID)
-                    {
-                        //w(i,j,k) = wSolid(i,j,k)
-                    }
-                    else
+                    if(!(m_MACGrid.getCell(i, j, k-1).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))
                     {
                         //w(i,j,k) -= scale * (p(i,j,k) - p(i,j,k-1))
                     }
@@ -162,10 +198,11 @@ void FlipSim::solvePressure()
                 {
                     //mark w(i,j,k) as unknown
                 }
+                m_MACGrid.getCell(i, j, k).velField = vec3(x,y,z);
             }
 }
 
-void FlipSim::step(float dt)
+void FlipSim::step(real dt)
 {
     /*
     Basic algorithm from Bridson's Course Notes:
@@ -183,12 +220,12 @@ void FlipSim::step(float dt)
         >Un+1 = project(dt, Ub)
     */
 
-    float t = 0;
+    real t = 0;
 
     while(t < dt)
     {
         //Calculate our substep
-        float subStep = cfl();
+        real subStep = cfl();
 
         updateGrid();
 
@@ -211,9 +248,9 @@ void FlipSim::step(float dt)
 
 void FlipSim::advectVelocityField()
 {
-    for(unsigned int k = 0; k < m_kSize; k++)
-        for(unsigned int j = 0; j < m_jSize; j++)
-            for(unsigned int i = 0; i < m_iSize; i++)
+    for(uint k = 0; k < m_kSize; k++)
+        for(uint j = 0; j < m_jSize; j++)
+            for(uint i = 0; i < m_iSize; i++)
             {
                 //do advection
             }
@@ -230,9 +267,9 @@ void FlipSim::project()
 }
 
 
-float FlipSim::cfl()
+real FlipSim::cfl()
 {
-    float ret = 0.0f;
+    real ret = 0.0;
     ret = m_MACGrid.h/m_MACGrid.getMaxSpeed();
     return ret * m_k_cfl;
 }

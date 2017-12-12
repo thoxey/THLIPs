@@ -1,4 +1,6 @@
 #include <iostream>
+#include"flipSim.h"
+
 
 int main()
 {

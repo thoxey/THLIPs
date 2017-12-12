@@ -1,20 +1,20 @@
 #include "MACGrid.h"
 
-MACGrid::MACGrid(glm::uvec3 _size)
+MACGrid::MACGrid(uvec3 _size)
 {
     m_i_length = _size.x;
     m_j_length = _size.y;
     m_k_length = _size.y;
 }
 
-MACGrid::MACGrid(unsigned int _i, unsigned int _j, unsigned int _k)
+MACGrid::MACGrid(uint _i, uint _j, uint _k)
 {
     m_i_length = _i;
     m_j_length = _j;
     m_k_length = _k;
 }
 
-std::vector<MG_Cell> MACGrid::getNeighbors()
+std::vector<MG_Cell> MACGrid::getNeighbors(MG_Cell _c)
 {
     return std::vector<MG_Cell>();
 }
@@ -24,9 +24,9 @@ bool MACGrid::checkInBounds(MG_Cell _c)
     return true;
 }
 
-float MACGrid::getMaxSpeed()
+real MACGrid::getMaxSpeed()
 {
-    float maxSpeed = 0.0f;
+    real maxSpeed = 0.0;
     for(MG_Particle p : m_particles)
     {
         maxSpeed = std::max(maxSpeed, p.vel.x);
@@ -36,29 +36,29 @@ float MACGrid::getMaxSpeed()
 }
 /*
 // Trace a particle from point (x, y, z) for t time using RK2.
-Point traceParticle(float x, float y, float z, float t)
+Point traceParticle(real x, real y, real z, real t)
     Vector V = getVelocity(x, y, z);
     V = getVelocity(x+0.5*t*V.x, y+0.5*t*V.y, z+0.5*t*V.z);
     return Point(x, y, z) + t*V;
  */
-glm::vec3 MACGrid::tracePoint(glm::vec3 _p, float _t)
+vec3 MACGrid::tracePoint(vec3 _p, real _t)
 {
-    glm::vec3 V = getVelocity(_p);
+    vec3 V = getVelocity(_p);
 
-    V = getVelocity(glm::vec3(_p.x+0.5f*_t*V.x, _p.y+0.5f*_t*V.y, _p.z+0.5f*_t*V.z));
+    V = getVelocity(vec3(_p.x+0.5f*_t*V.x, _p.y+0.5f*_t*V.y, _p.z+0.5f*_t*V.z));
 
     return _p + _t*V;
 }
 /*
 // Get the interpolated velocity at a point in space.
-Vector getVelocity(float x, float y, float z)
+Vector getVelocity(real x, real y, real z)
     Vector V;
     V.x = getInterpolatedValue(x/h, y/h-0.5, z/h-0.5, 0);
     V.y = getInterpolatedValue(x/h-0.5, y/h, z/h-0.5, 1);
     V.z = getInterpolatedValue(x/h-0.5, y/h-0.5, z/h, 2);
     return V;
  */
-glm::vec3 MACGrid::getVelocity(glm::vec3 _v)
+vec3 MACGrid::getVelocity(vec3 _v)
 {
     _v.x = getInterpolatedValue(_v, 0);
     _v.y = getInterpolatedValue(_v, 1);
@@ -67,7 +67,7 @@ glm::vec3 MACGrid::getVelocity(glm::vec3 _v)
 }
 /*
 // Get an interpolated data value from the grid.
-float getInterpolatedValue(float x, float y, float z, int index)
+real getInterpolatedValue(real x, real y, real z, int index)
     int i = floor(x);
     int j = floor(y);
     int k = floor(z);
@@ -83,7 +83,7 @@ float getInterpolatedValue(float x, float y, float z, int index)
 
 (x-i) * (y-j) * (z-k) * cell(i+1, j+1, k+1).u[index];
  */
-float MACGrid::getInterpolatedValue(glm::vec3 _v, unsigned int idx)
+real MACGrid::getInterpolatedValue(vec3 _v, uint idx)
 {
     int i = std::floor(_v.x);
     int j = std::floor(_v.y);
@@ -100,7 +100,7 @@ float MACGrid::getInterpolatedValue(glm::vec3 _v, unsigned int idx)
            (_v.x - i) * (_v.y - j) * (_v.z - k) * getCell(i+1, j+1, k+1).velField[idx];
 }
 
-bool MACGrid::checkForCell(unsigned int _i, unsigned int _j, unsigned int _k)
+bool MACGrid::checkForCell(uint _i, uint _j, uint _k)
 {
     std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_i,_j,_k));
     if(ret == m_hashTable.end())
@@ -110,7 +110,7 @@ bool MACGrid::checkForCell(unsigned int _i, unsigned int _j, unsigned int _k)
 
 }
 
-bool MACGrid::checkForCell(glm::uvec3 _pos)
+bool MACGrid::checkForCell(uvec3 _pos)
 {
     std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_pos.x,_pos.y,_pos.z));
     if(ret == m_hashTable.end())
@@ -124,19 +124,19 @@ bool MACGrid::checkForCell(MG_Particle _p)
     return true;
 }
 
-MG_Cell MACGrid::getCell(unsigned int _i, unsigned int _j, unsigned int _k)
+MG_Cell MACGrid::getCell(uint _i, uint _j, uint _k)
 {
     std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_i,_j,_k));
     return ret->second;
 }
 
-MG_Cell MACGrid::getCell(glm::uvec3 _pos)
+MG_Cell MACGrid::getCell(uvec3 _pos)
 {
     std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_pos.x,_pos.y,_pos.z));
     return ret->second;
 }
 
-unsigned int MACGrid::generateKey(unsigned int _i, unsigned int _j, unsigned int _k)
+uint MACGrid::generateKey(uint _i, uint _j, uint _k)
 {
     return 541*_i+79*_j+31*_k;
 }

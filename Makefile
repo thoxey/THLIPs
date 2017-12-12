@@ -50,10 +50,12 @@ OBJECTS_DIR   = obj/
 
 SOURCES       = src/flipSim.cpp \
 		src/MACGrid.cpp \
-		src/main.cpp 
+		src/main.cpp \
+		src/utils.cpp 
 OBJECTS       = obj/flipSim.o \
 		obj/MACGrid.o \
-		obj/main.o
+		obj/main.o \
+		obj/utils.o
 DIST          = ../../Qt/5.7/clang_64/mkspecs/features/spec_pre.prf \
 		../../Qt/5.7/clang_64/mkspecs/qdevice.pri \
 		../../Qt/5.7/clang_64/mkspecs/features/device_config.prf \
@@ -210,9 +212,11 @@ DIST          = ../../Qt/5.7/clang_64/mkspecs/features/spec_pre.prf \
 		../../Qt/5.7/clang_64/mkspecs/features/yacc.prf \
 		../../Qt/5.7/clang_64/mkspecs/features/lex.prf \
 		Thlips.pro include/flipSim.h \
-		include/MACGrid.h src/flipSim.cpp \
+		include/MACGrid.h \
+		include/utils.h src/flipSim.cpp \
 		src/MACGrid.cpp \
-		src/main.cpp
+		src/main.cpp \
+		src/utils.cpp
 QMAKE_TARGET  = Thlips
 DESTDIR       = 
 TARGET        = Thlips.app/Contents/MacOS/Thlips
@@ -573,8 +577,8 @@ dist: distdir FORCE
 distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
-	$(COPY_FILE) --parents include/flipSim.h include/MACGrid.h $(DISTDIR)/
-	$(COPY_FILE) --parents src/flipSim.cpp src/MACGrid.cpp src/main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents include/flipSim.h include/MACGrid.h include/utils.h $(DISTDIR)/
+	$(COPY_FILE) --parents src/flipSim.cpp src/MACGrid.cpp src/main.cpp src/utils.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -619,14 +623,21 @@ compiler_clean:
 ####### Compile
 
 obj/flipSim.o: src/flipSim.cpp include/flipSim.h \
-		include/MACGrid.h
+		include/MACGrid.h \
+		include/utils.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/flipSim.o src/flipSim.cpp
 
-obj/MACGrid.o: src/MACGrid.cpp 
+obj/MACGrid.o: src/MACGrid.cpp include/MACGrid.h \
+		include/utils.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/MACGrid.o src/MACGrid.cpp
 
-obj/main.o: src/main.cpp 
+obj/main.o: src/main.cpp include/flipSim.h \
+		include/MACGrid.h \
+		include/utils.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/main.o src/main.cpp
+
+obj/utils.o: src/utils.cpp include/utils.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/utils.o src/utils.cpp
 
 ####### Install
 
