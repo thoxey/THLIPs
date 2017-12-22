@@ -1,16 +1,16 @@
 #include "flipSim.h"
 
-void FlipSim::initialise()
+FlipSim::FlipSim(uvec3 _size):m_MACGrid(_size)
 {
-    //Place 8 jittered particles per voxel into a voxel grid
-    initGrid();
+    ;
 
 }
 
-void FlipSim::initGrid()
+FlipSim::FlipSim(uint _i, uint _j, uint _k): m_MACGrid(_i, _j, _k)
 {
-
+    ;
 }
+
 
 void FlipSim::updateGrid()
 {
@@ -186,7 +186,6 @@ void FlipSim::applyPressure()
                     //mark v(i,j,k) as unknown
                 }
                 //update w
-                //update v
                 if(m_MACGrid.getCell(i, j, k-1).type == FLUID || m_MACGrid.getCell(i, j, k).type == FLUID)
                 {
                     if(!(m_MACGrid.getCell(i, j, k-1).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))

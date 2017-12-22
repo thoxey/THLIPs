@@ -11,7 +11,13 @@
 #include<eigen3/Eigen/Sparse>
 #include<eigen3/Eigen/SparseCholesky>
 
-typedef unsigned int uint;
+//----------------------------------------------------------------------------------------------------------------------
+/// @file utils.h
+/// @brief The utility header, contains definitions for grid components and universal functions
+/// @author Tom Hoxey
+/// @version 1.0
+/// @date 19/01/17 Initial version
+//----------------------------------------------------------------------------------------------------------------------
 
 //#define USE_DOUBLE_PRECISION
 //-fsingle-precision-constant
@@ -26,6 +32,7 @@ typedef glm::vec3 vec3;
 #endif
 
 typedef glm::uvec3 uvec3;
+typedef unsigned int uint;
 
 enum cellType {FLUID, AIR, SOLID};
 
