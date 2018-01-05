@@ -151,9 +151,9 @@ void FlipSim::calculatePressure()
 
 }
 
-void FlipSim::applyPressure()
+void FlipSim::applyPressure(real dt, real density, real dx)
 {
-    float scale = 1.0f; //dt / (density*dx);
+    float scale = dt / (density*dx);
 
     for(uint k = 0; k < m_kSize; k++)
         for(uint j = 0; j < m_jSize; j++)
@@ -167,7 +167,7 @@ void FlipSim::applyPressure()
                 {
                     if(!(m_MACGrid.getCell(i-1, j, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))
                     {
-                        //u(i,j,k) -= scale * (p(i,j,k) - p(i-1,j,k))
+                        m_MACGrid.getCell(i,j,k).velField.u -= scale * (m_MACGrid.getCell(i,j,k).p - m_MACGrid.getCell(i-1,j,k).p)
                     }
                 }
                 else
@@ -180,7 +180,7 @@ void FlipSim::applyPressure()
                 {
                     if(!(m_MACGrid.getCell(i, j-1, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))
                     {
-                        //v(i,j,k) -= scale * (p(i,j,k) - p(i,j-1,k))
+                        m_MACGrid.getCell(i,j,k).velField.v -= scale * (m_MACGrid.getCell(i,j,k).p - m_MACGrid.getCell(i,j-1,k).p)
                     }
                 }
                 else
@@ -192,7 +192,7 @@ void FlipSim::applyPressure()
                 {
                     if(!(m_MACGrid.getCell(i, j, k-1).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))
                     {
-                        //w(i,j,k) -= scale * (p(i,j,k) - p(i,j,k-1))
+                       m_MACGrid.getCell(i,j,k).velField.w -= scale * (m_MACGrid.getCell(i,j,k).p - m_MACGrid.getCell(i,j,k-1).p)
                     }
                 }
                 else
