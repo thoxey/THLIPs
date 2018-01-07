@@ -105,69 +105,144 @@ void FlipSim::updateGrid()
 
     //delete any cells with layer == -1
 }
-void FlipSim::calculatePressure()
+
+void FlipSim::calculateNegativeDivergence(real m_dx)
 {
-    using namespace Eigen;
+    real scale = -1/m_dx;
+    for(uint k = 0; k < m_kSize; k++)
     {
-        //Sum up the fluid cells
-        uint n_fluidCells = 0;
-        for(MG_Cell c : m_MACGrid.m_cells)
-            if(c.type == FLUID)
-                n_fluidCells++;
-
-
-        SparseMatrix<int> pressureMat(n_fluidCells, n_fluidCells);
-        pressureMat.reserve(VectorXi::Constant(6, n_fluidCells));
-
-        VectorX divergence(n_fluidCells);
-
-        uint length = m_MACGrid.m_cells.size();
-        for(MG_Cell c : m_MACGrid.m_cells)
+        for(uint j = 0; j < m_jSize; j++)
         {
-            int p = 6;
-            std::vector<MG_Cell> neighbors = m_MACGrid.getNeighbors(c);
-            for(MG_Cell neighbor : neighbors)
+            for(uint i = 0; i < m_iSize; i++)
             {
-                int nidx = getIndex(length, neighbor);
-                if(neighbor.type != SOLID)
-                    pressureMat.insert(nidx, nidx) = -1;
-                else
-                    p--;
+                MG_Cell c = m_MACGrid.getCell(i, j, k);
+                if(c.type == FLUID)
+                {
+                    //Default case
+                    real uip1 = 0.0;
+                    real vjp1 = 0.0;
+                    real wkp1 = 0.0;
+                    if(m_MACGrid.getCell(i+1, j, k).type == FLUID)
+                        uip1 = m_MACGrid.getCell(i+1, j, k).velField.x;
+                    if(m_MACGrid.getCell(i, j+1, k).type == FLUID)
+                        vjp1 = m_MACGrid.getCell(i, j+1, k).velField.y;
+                    if(m_MACGrid.getCell(i, j, k+1).type == FLUID)
+                        wkp1 = m_MACGrid.getCell(i, j, k+1).velField.z;
+
+                    c.rhs = scale * (uip1 - c.velField.x + vjp1 - c.velField.y + wkp1 - c.velField.z);
+                }
             }
-            uint i = getIndex(length, c);
-            pressureMat.insert(i,i) = p;
         }
-
-        //A sparse solver: time and/or sanity saver
-        SimplicialLLT<SparseMatrix<int>> solver;
-        //To store the result in
-        VectorX x(n_fluidCells);
-
-        solver.compute(pressureMat);
-        //Commented out for now, causes error poss bc it is empty?
-        //x = solver.solve(divergence);
-
     }
+}
+
+void FlipSim::calculatePressure(real _dt)
+{
+    real scale = _dt / (m_density* m_dx * m_dx);
+    //Sum up the fluid cells
+    uint n_fluidCells = 0;
+    for(MG_Cell c : m_MACGrid.m_cells)
+        if(c.type == FLUID)
+            n_fluidCells++;
+
+
+    Eigen::SparseMatrix<real> pressureMat(n_fluidCells, n_fluidCells);
+    pressureMat.reserve(VectorX::Constant(7, n_fluidCells));
+
+    VectorX divergence(n_fluidCells);
+
+    uint length = m_MACGrid.m_cells.size();
+
+    //Bridsons book figure 5.5
+    for(uint k = 0; k < m_kSize; k++)
+    {
+        for(uint j = 0; j < m_jSize; j++)
+        {
+            for(uint i = 0; i < m_iSize; i++)
+            {
+                uint aDiagIdx = getIndex(length, m_MACGrid.getCell(i,j,k));
+                uint aXidx = getIndex(length, m_MACGrid.getCell(i+1,j,k));
+                uint aYidx = getIndex(length, m_MACGrid.getCell(i,j+1,k));
+                uint aZidx = getIndex(length, m_MACGrid.getCell(i,j,k+1));
+                if(m_MACGrid.getCell(i,j,k).type == FLUID)
+                {
+                    if(m_MACGrid.getCell(i-1,j,k).type == FLUID)
+                    {
+                        pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                    }
+                    if(m_MACGrid.getCell(i+1,j,k).type == FLUID)
+                    {
+                        pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                        pressureMat.coeffRef(aXidx, aXidx) -= scale;
+                    }
+                    else if(m_MACGrid.getCell(i+1,j,k).type == AIR)
+                    {
+                        pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                    }
+
+                    if(m_MACGrid.getCell(i,j-1,k).type == FLUID)
+                    {
+                        pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                    }
+                    if(m_MACGrid.getCell(i,j+1,k).type == FLUID)
+                    {
+                        pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                        pressureMat.coeffRef(aYidx, aYidx) -= scale;
+                    }
+                    else if(m_MACGrid.getCell(i,j+1,k).type == AIR)
+                    {
+                        pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                    }
+
+                    if(m_MACGrid.getCell(i,j,k-1).type == FLUID)
+                    {
+                        pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                    }
+                    if(m_MACGrid.getCell(i,j,k+1).type == FLUID)
+                    {
+                        pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                        pressureMat.coeffRef(aZidx, aZidx) -= scale;
+                    }
+                    else if(m_MACGrid.getCell(i,j,k+1).type == AIR)
+                    {
+                        pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                    }
+                }
+            }
+        }
+    }
+
+    //A sparse solver: time and/or sanity saver
+    Eigen::SimplicialLLT<Eigen::SparseMatrix<real>> solver;
+    //To store the result in
+    VectorX x(n_fluidCells);
+
+    solver.compute(pressureMat);
+    //Commented out for now, causes error poss bc it is empty?
+    //x = solver.solve(divergence);
 
 }
 
-void FlipSim::applyPressure(real dt, real density, real dx)
+
+void FlipSim::applyPressure(real _dt)
 {
-    float scale = dt / (density*dx);
+    real scale = _dt / (m_density*m_dx);
 
     for(uint k = 0; k < m_kSize; k++)
+    {
         for(uint j = 0; j < m_jSize; j++)
+        {
             for(uint i = 0; i < m_iSize; i++)
             {
-                real x = 0.0;
-                real y = 0.0;
-                real z = 0.0;
+                real u = 0.0;
+                real v = 0.0;
+                real w = 0.0;
                 //Update u
                 if(m_MACGrid.getCell(i-1, j, k).type == FLUID || m_MACGrid.getCell(i, j, k).type == FLUID)
                 {
                     if(!(m_MACGrid.getCell(i-1, j, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))
                     {
-                        x -= scale * (m_MACGrid.getCell(i,j,k).p - m_MACGrid.getCell(i-1,j,k).p)
+                        u -= scale * (m_MACGrid.getCell(i,j,k).p - m_MACGrid.getCell(i-1,j,k).p);
                     }
                 }
                 else
@@ -180,7 +255,7 @@ void FlipSim::applyPressure(real dt, real density, real dx)
                 {
                     if(!(m_MACGrid.getCell(i, j-1, k).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))
                     {
-                        y -= scale * (m_MACGrid.getCell(i,j,k).p - m_MACGrid.getCell(i,j-1,k).p)
+                        v -= scale * (m_MACGrid.getCell(i,j,k).p - m_MACGrid.getCell(i,j-1,k).p);
                     }
                 }
                 else
@@ -192,18 +267,20 @@ void FlipSim::applyPressure(real dt, real density, real dx)
                 {
                     if(!(m_MACGrid.getCell(i, j, k-1).type == SOLID || m_MACGrid.getCell(i, j, k).type == SOLID))
                     {
-                       z -= scale * (m_MACGrid.getCell(i,j,k).p - m_MACGrid.getCell(i,j,k-1).p)
+                        w -= scale * (m_MACGrid.getCell(i,j,k).p - m_MACGrid.getCell(i,j,k-1).p);
                     }
                 }
                 else
                 {
                     //mark w(i,j,k) as unknown
                 }
-                m_MACGrid.getCell(i, j, k).velField = vec3(x,y,z);
+                m_MACGrid.getCell(i, j, k).velField = vec3(u,v,w);
             }
+        }
+    }
 }
 
-void FlipSim::step(real dt)
+void FlipSim::step(real _dt)
 {
     /*
     Basic algorithm from Bridson's Course Notes:
@@ -223,7 +300,7 @@ void FlipSim::step(real dt)
 
     real t = 0;
 
-    while(t < dt)
+    while(t < _dt)
     {
         //Calculate our substep
         real subStep = cfl();
@@ -233,7 +310,7 @@ void FlipSim::step(real dt)
 
 
         //Per cell
-        project();
+        project(_dt);
 
         //Per particle
         //advect the velocity field
@@ -262,9 +339,11 @@ void FlipSim::addBodyForce()
 
 }
 
-void FlipSim::project()
+void FlipSim::project(real _dt)
 {
-
+    calculateNegativeDivergence(_dt);
+    calculatePressure(_dt);
+    applyPressure(_dt);
 }
 
 

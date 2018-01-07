@@ -40,6 +40,7 @@ struct MG_Cell
 {
     uvec3 gridPos;
 
+    //Vel field should be half a cell offset from the pressure
     vec3 velField;
 
     //Pressure
@@ -50,6 +51,8 @@ struct MG_Cell
     cellType type;
 
     uint key;
+    //Fig 5.3 Bridsons book
+    real rhs;
 
     MG_Cell(uvec3 _pos, vec3 _velField, real _p)
     {
