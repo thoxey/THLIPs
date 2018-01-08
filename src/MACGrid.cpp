@@ -14,6 +14,38 @@ MACGrid::MACGrid(uint _i, uint _j, uint _k)
     m_k_length = _k;
 }
 
+vec3 MACGrid::getJitteredPos(MG_Cell _c)
+{
+    real x = randRange(h);
+    real y = randRange(h);
+    real z = randRange(h);
+
+    return vec3((_c.gridPos.x*h) + x, (_c.gridPos.y*h) + y, (_c.gridPos.z*h) + z);
+}
+
+uint MACGrid::generateKey(uint _i, uint _j, uint _k)
+{
+    return 541*_i+79*_j+31*_k;
+}
+
+uint MACGrid::generateKey(uvec3 _pos)
+{
+    return 541*_pos.x+79*_pos.y+31*_pos.z;
+}
+
+void MACGrid::initialiseCell(MG_Cell _c, uvec3 _pos)
+{
+    _c.gridPos = _pos;
+    _c.key = generateKey(_pos);
+    for(uint i = 0; i < 8; i++)
+    {
+        MG_Particle p;
+        p.cellidx = _c.key;
+        p.pos = getJitteredPos(_c);
+        m_particles.push_back(p);
+    }
+}
+
 std::vector<MG_Cell> MACGrid::getNeighbors(MG_Cell _c)
 {
     return std::vector<MG_Cell>();
@@ -134,11 +166,6 @@ MG_Cell MACGrid::getCell(uvec3 _pos)
 {
     std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_pos.x,_pos.y,_pos.z));
     return ret->second;
-}
-
-uint MACGrid::generateKey(uint _i, uint _j, uint _k)
-{
-    return 541*_i+79*_j+31*_k;
 }
 
 void MACGrid::insertCellInHashTable(MG_Cell _c)

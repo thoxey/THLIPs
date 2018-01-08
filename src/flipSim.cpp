@@ -2,7 +2,7 @@
 
 FlipSim::FlipSim(uvec3 _size):m_MACGrid(_size)
 {
-    ;
+    m_dx = m_MACGrid.h;
 
 }
 
@@ -158,12 +158,12 @@ void FlipSim::calculatePressure(real _dt)
     real scale = _dt / (m_density * m_dx * m_dx);
     //Sum up the fluid cells
     uint n_fluidCells = 0;
-    std::vector<real> rhsVec;
+    std::vector<MG_Cell> fluidCells;
     for(MG_Cell c : m_MACGrid.m_cells)
         if(c.type == FLUID)
         {
             n_fluidCells++;
-            rhsVec.push_back(c.rhs);
+            fluidCells.push_back(c);
         }
 
     //Coeff Matrix
@@ -174,7 +174,7 @@ void FlipSim::calculatePressure(real _dt)
     //Divergence
     VectorX b(n_fluidCells);
     for(uint i = 0; i < n_fluidCells; i++)
-        b[i] = rhsVec[i];
+        b[i] = fluidCells[i].rhs;
 
     uint length = m_MACGrid.m_cells.size();
 
@@ -244,6 +244,8 @@ void FlipSim::calculatePressure(real _dt)
     solver.compute(A);
     p = solver.solve(b);
 
+    for(uint i = 0; i < n_fluidCells; i++)
+        fluidCells[i].p = p[i];
 }
 
 
@@ -331,14 +333,12 @@ void FlipSim::step(real _dt)
 
         updateGrid();
 
-
-
         //Per cell
         project(_dt);
 
         //Per particle
         //advect the velocity field
-        advectVelocityField();
+        advectVelocityField(_dt);
 
         //Add gravity and stuff
         //Per particle calculation
@@ -348,14 +348,10 @@ void FlipSim::step(real _dt)
     }
 }
 
-void FlipSim::advectVelocityField()
+void FlipSim::advectVelocityField(real _dt)
 {
-    for(uint k = 0; k < m_kSize; k++)
-        for(uint j = 0; j < m_jSize; j++)
-            for(uint i = 0; i < m_iSize; i++)
-            {
-                //do advection
-            }
+    for(MG_Particle p : m_MACGrid.m_particles)
+        m_MACGrid.tracePoint(p.pos, _dt);
 }
 
 void FlipSim::addBodyForce()
