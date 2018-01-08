@@ -106,7 +106,7 @@ void FlipSim::updateGrid()
     //delete any cells with layer == -1
 }
 
-void FlipSim::calculateNegativeDivergence(real m_dx)
+void FlipSim::calculateNegativeDivergence()
 {
     real scale = -1/m_dx;
     for(uint k = 0; k < m_kSize; k++)
@@ -118,22 +118,39 @@ void FlipSim::calculateNegativeDivergence(real m_dx)
                 MG_Cell c = m_MACGrid.getCell(i, j, k);
                 if(c.type == FLUID)
                 {
-                    //Default case
                     real uip1 = 0.0;
                     real vjp1 = 0.0;
                     real wkp1 = 0.0;
                     if(m_MACGrid.getCell(i+1, j, k).type == FLUID)
-                        uip1 = m_MACGrid.getCell(i+1, j, k).velField.x;
+                        uip1 = m_MACGrid.getCell(i+1, j, k).u();
                     if(m_MACGrid.getCell(i, j+1, k).type == FLUID)
-                        vjp1 = m_MACGrid.getCell(i, j+1, k).velField.y;
+                        vjp1 = m_MACGrid.getCell(i, j+1, k).w();
                     if(m_MACGrid.getCell(i, j, k+1).type == FLUID)
-                        wkp1 = m_MACGrid.getCell(i, j, k+1).velField.z;
+                        wkp1 = m_MACGrid.getCell(i, j, k+1).v();
 
-                    c.rhs = scale * (uip1 - c.velField.x + vjp1 - c.velField.y + wkp1 - c.velField.z);
+                    c.rhs = scale * (uip1 - c.u() + vjp1 - c.w() + wkp1 - c.v());
+
+                    //figure 5.4 Bridon's book
+                    if(m_MACGrid.getCell(i-1, j, k).type == SOLID)
+                        c.rhs -= scale * c.u();
+                    if(m_MACGrid.getCell(i+1, j, k).type == SOLID)
+                        c.rhs += scale * m_MACGrid.getCell(i+1, j, k).u();
+
+                    if(m_MACGrid.getCell(i, j-1, k).type == SOLID)
+                        c.rhs -= scale * m_MACGrid.getCell(i, j, k).v();
+                    if(m_MACGrid.getCell(i, j+1, k).type == SOLID)
+                        c.rhs += scale * m_MACGrid.getCell(i, j+1, k).v();
+
+                    if(m_MACGrid.getCell(i,j,k-1).type == SOLID)
+                        c.rhs -= scale * m_MACGrid.getCell(i,j,k).w();
+                    if(m_MACGrid.getCell(i,j,k+1).type == SOLID)
+                        c.rhs += scale * m_MACGrid.getCell(i, j, k+1).w();
+
                 }
             }
         }
     }
+
 }
 
 void FlipSim::calculatePressure(real _dt)
@@ -173,7 +190,7 @@ void FlipSim::calculatePressure(real _dt)
                     if(m_MACGrid.getCell(i+1,j,k).type == FLUID)
                     {
                         pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
-                        pressureMat.coeffRef(aXidx, aXidx) -= scale;
+                        pressureMat.coeffRef(aDiagIdx, aXidx) -= scale;
                     }
                     else if(m_MACGrid.getCell(i+1,j,k).type == AIR)
                     {
@@ -187,7 +204,7 @@ void FlipSim::calculatePressure(real _dt)
                     if(m_MACGrid.getCell(i,j+1,k).type == FLUID)
                     {
                         pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
-                        pressureMat.coeffRef(aYidx, aYidx) -= scale;
+                        pressureMat.coeffRef(aDiagIdx, aYidx) -= scale;
                     }
                     else if(m_MACGrid.getCell(i,j+1,k).type == AIR)
                     {
@@ -201,7 +218,7 @@ void FlipSim::calculatePressure(real _dt)
                     if(m_MACGrid.getCell(i,j,k+1).type == FLUID)
                     {
                         pressureMat.coeffRef(aDiagIdx, aDiagIdx) += scale;
-                        pressureMat.coeffRef(aZidx, aZidx) -= scale;
+                        pressureMat.coeffRef(aDiagIdx, aZidx) -= scale;
                     }
                     else if(m_MACGrid.getCell(i,j,k+1).type == AIR)
                     {
@@ -341,7 +358,7 @@ void FlipSim::addBodyForce()
 
 void FlipSim::project(real _dt)
 {
-    calculateNegativeDivergence(_dt);
+    calculateNegativeDivergence();
     calculatePressure(_dt);
     applyPressure(_dt);
 }

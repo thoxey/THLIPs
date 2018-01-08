@@ -68,6 +68,19 @@ struct MG_Cell
         layer = -1;
     }
 
+    real u()
+    {
+        return velField.x;
+    }
+    real w()
+    {
+        return velField.y;
+    }
+    real v()
+    {
+        return velField.z;
+    }
+
 };
 
 struct MG_Particle
@@ -77,6 +90,7 @@ struct MG_Particle
     vec3 vel;
 
     uint cellidx;
+
 };
 
 uint getIndex(uint _length, MG_Cell _c);
