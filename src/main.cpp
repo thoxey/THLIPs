@@ -4,6 +4,7 @@
 /*
   TO DO:
   -FINISH DOC TAGS (always)
+  -Check the density in pressure solve
   -Check Advection Algorithm
   -Look into level sets
   -Add body forces
