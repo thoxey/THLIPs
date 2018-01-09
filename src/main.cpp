@@ -8,7 +8,7 @@
   -Check Advection Algorithm
   -Look into level sets
   -Add body forces
-  -Transfer velocities from grid to particles
+  -Transfer velocities from grid to particles and vice versa
   -Actually make a chain of functions and export some fngo
  */
 

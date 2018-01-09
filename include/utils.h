@@ -37,6 +37,8 @@ typedef unsigned int uint;
 
 enum cellType {FLUID, AIR, SOLID};
 
+enum neighbors {RIGHT, LEFT, UP, DOWN, FORWARD, BACKWARD};
+
 struct MG_Cell
 {
     uvec3 gridPos;
@@ -97,6 +99,20 @@ struct MG_Particle
 uint getIndex(uint _length, MG_Cell _c);
 
 real randRange(real _max);
+
+const vec3 rightVec = vec3(1.0,0.0,0.0);
+const vec3 leftVec = vec3(-1.0,0.0,0.0);
+const vec3 upVec = vec3(0.0,1.0,0.0);
+const vec3 downVec = vec3(0.0,-1.0,0.0);
+const vec3 forwardVec = vec3(0.0,0.0,1.0);
+const vec3 backwardVec = vec3(0.0,0.0,1.0);
+
+const uvec3 urightVec = uvec3(1,0,0);
+const uvec3 uleftVec = uvec3(-1,0,0);
+const uvec3 uupVec = uvec3(0,1,0);
+const uvec3 udownVec = uvec3(0,-1,0);
+const uvec3 uforwardVec = uvec3(0,0,1);
+const uvec3 ubackwardVec = uvec3(0,0,1);
 
 //Empty doc tags for copy pasting!
 //----------------------------------------------------------------------------------------------------------------------
