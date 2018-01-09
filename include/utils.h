@@ -100,6 +100,8 @@ uint getIndex(uint _length, MG_Cell _c);
 
 real randRange(real _max);
 
+real lerp(real a, real b, real x);
+
 const vec3 rightVec = vec3(1.0,0.0,0.0);
 const vec3 leftVec = vec3(-1.0,0.0,0.0);
 const vec3 upVec = vec3(0.0,1.0,0.0);

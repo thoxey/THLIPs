@@ -40,11 +40,11 @@ void FlipSim::calculateNegativeDivergence()
                         std::vector<MG_Cell> neighbors;
 
                         if(neighbors[RIGHT].type == FLUID)
-                            uip1 = tmp.u();
+                            uip1 = neighbors[RIGHT].u();
                         if(neighbors[UP].type == FLUID)
-                            vjp1 = tmp.w();
+                            vjp1 = neighbors[UP].w();
                         if(neighbors[FORWARD].type == FLUID)
-                            wkp1 = tmp.v();
+                            wkp1 = neighbors[FORWARD].v();
 
                         c.rhs = scale * (uip1 - c.u() + vjp1 - c.w() + wkp1 - c.v());
 
@@ -52,17 +52,17 @@ void FlipSim::calculateNegativeDivergence()
                         if(neighbors[LEFT].type == SOLID)
                             c.rhs -= scale * c.u();
                         if(neighbors[RIGHT].type == SOLID)
-                            c.rhs += scale * tmp.u();
+                            c.rhs += scale * neighbors[RIGHT].u();
 
                         if(neighbors[DOWN].type == SOLID)
-                            c.rhs -= scale * tmp.v();
+                            c.rhs -= scale * neighbors[DOWN].v();
                         if(neighbors[UP].type == SOLID)
-                            c.rhs += scale * tmp.v();
+                            c.rhs += scale * neighbors[UP].v();
 
                         if(neighbors[BACKWARD].type == SOLID)
-                            c.rhs -= scale * tmp.w();
+                            c.rhs -= scale * neighbors[BACKWARD].w();
                         if(neighbors[FORWARD].type == SOLID)
-                            c.rhs += scale * tmp.w();
+                            c.rhs += scale * neighbors[FORWARD].w();
 
                     }
             }
@@ -216,7 +216,7 @@ void FlipSim::applyPressure(real _dt)
                 }
 
                 //update v
-                if(neighbors[DOWN] == FLUID || c.type == FLUID)
+                if(neighbors[DOWN].type == FLUID || c.type == FLUID)
                 {
                     if(!(neighbors[DOWN].type == SOLID || c.type == SOLID))
                     {
