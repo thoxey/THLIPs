@@ -44,12 +44,10 @@ struct MG_Cell
     uvec3 gridPos;
 
     //Vel field should be half a cell offset from the pressure
-    vec3 velField;
+    vec3 velField, oldVelField;
 
     //Pressure
     real p;
-
-    int layer;
 
     cellType type;
 
@@ -66,11 +64,7 @@ struct MG_Cell
 
         _p = p;
     }
-    MG_Cell()
-    {
-        layer = -1;
-    }
-
+    MG_Cell(){}
     real u()
     {
         return velField.x;
@@ -96,12 +90,6 @@ struct MG_Particle
 
 };
 
-uint getIndex(uint _length, MG_Cell _c);
-
-real randRange(real _max);
-
-real lerp(real a, real b, real x);
-
 const vec3 rightVec = vec3(1.0,0.0,0.0);
 const vec3 leftVec = vec3(-1.0,0.0,0.0);
 const vec3 upVec = vec3(0.0,1.0,0.0);
@@ -115,6 +103,24 @@ const uvec3 uupVec = uvec3(0,1,0);
 const uvec3 udownVec = uvec3(0,-1,0);
 const uvec3 uforwardVec = uvec3(0,0,1);
 const uvec3 ubackwardVec = uvec3(0,0,1);
+
+namespace utility
+{
+uint getIndex(uint _length, MG_Cell _c);
+
+real randRange(real _max);
+
+real randRange(real _min, real _max);
+
+real lerp(real _a, real _b, real _x);
+
+real invLerp(real _a, real _b, real _l);
+
+real trilerp(std::vector<real> V, real x, real y, real z);
+
+}
+
+
 
 //Empty doc tags for copy pasting!
 //----------------------------------------------------------------------------------------------------------------------

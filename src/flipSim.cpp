@@ -11,12 +11,89 @@ FlipSim::FlipSim(uint _i, uint _j, uint _k): m_MACGrid(_i, _j, _k)
     ;
 }
 
+void FlipSim::step(real _dt)
+{
+    /*
+    Basic algorithm from Bridson's Course Notes:
+    (U is a velocity field)
+    >for timeStep n = 0,1,2...
+        >Determine Time Step dt to go from tn to tn+1
+
+        Advect quantity q, through vector field Un for time interval dt
+        >set Ua = advect(Un, dt, q)
+
+        Add body forces
+        >Ub = Ua +dtg
+
+        To handle pressure/incompressibility we make a function called project
+        >Un+1 = project(dt, Ub)
+    */
+
+    real t = 0;
+
+    while(t < _dt)
+    {
+        //Calculate our substep
+        real subStep = cfl();
+
+        updateGrid();
+
+        //Add gravity and stuff
+        //Per particle calculation
+        addBodyForce(_dt);
+
+        //Per cell
+        project(_dt);
+
+        updateParticles();
+
+        //Per particle
+        //advect the velocity field
+        advectVelocityField(_dt);
+
+        t += subStep;
+    }
+}
 
 void FlipSim::updateGrid()
 {
-    for(MG_Particle p : m_MACGrid.m_particles)
+    for(uint k = 0; k < m_kSize; k++)
     {
+        for(uint j = 0; j < m_jSize; j++)
+        {
+            for(uint i = 0; i < m_iSize; i++)
+            {
+                MG_Cell c;
+                if(m_MACGrid.checkForCell(i, j, k, c))
+                {
+                    std::vector<MG_Cell> neighbors = m_MACGrid.getNeighbors(c);
+                    std::vector<MG_Particle> tmpP;
+                    vec3 vel;
+                    for(MG_Particle p : m_MACGrid.m_particles)
+                    {
+                        if(c.key == p.cellidx)
+                            tmpP.push_back(p);
+                    }
+                    if(tmpP.size() == 0 && c.type != SOLID)
+                    {
+                        c.type = AIR;
+                        continue;
+                    }
 
+                    c.type = FLUID;
+
+                    for(MG_Particle p : tmpP)
+                    {
+                        vec3 cellpos = m_MACGrid.getCellPos(c);
+                        real newU = utility::lerp(neighbors[LEFT].u(), c.u(), p.pos.x-cellpos.x);
+                        real newV = utility::lerp(neighbors[DOWN].v(), c.v(), p.pos.y-cellpos.y);
+                        real newW = utility::lerp(neighbors[BACKWARD].w(), c.w(), p.pos.z-cellpos.z);
+                        vel += vec3(newU, newV, newW);
+                    }
+                    vel /= tmpP.size();
+                }
+            }
+        }
     }
 
 }
@@ -108,17 +185,17 @@ void FlipSim::calculatePressure(real _dt)
                 std::vector<MG_Cell> neighbors;
                 if(m_MACGrid.checkForCell(i,j,k,c))
                 {
-                    aDiagIdx = getIndex(length, c);
+                    aDiagIdx = utility::getIndex(length, c);
                     neighbors = m_MACGrid.getNeighbors(c);
                 }
                 else
                     continue;
 
-                aXidx = getIndex(length, neighbors[RIGHT]);
+                aXidx = utility::getIndex(length, neighbors[RIGHT]);
 
-                aYidx = getIndex(length, neighbors[UP]);
+                aYidx = utility::getIndex(length, neighbors[UP]);
 
-                aZidx = getIndex(length, neighbors[FORWARD]);
+                aZidx = utility::getIndex(length, neighbors[FORWARD]);
 
                 if(c.type == FLUID)
                 {
@@ -245,46 +322,11 @@ void FlipSim::applyPressure(real _dt)
     }
 }
 
-void FlipSim::step(real _dt)
+void FlipSim::updateParticles()
 {
-    /*
-    Basic algorithm from Bridson's Course Notes:
-    (U is a velocity field)
-    >for timeStep n = 0,1,2...
-        >Determine Time Step dt to go from tn to tn+1
-
-        Advect quantity q, through vector field Un for time interval dt
-        >set Ua = advect(Un, dt, q)
-
-        Add body forces
-        >Ub = Ua +dtg
-
-        To handle pressure/incompressibility we make a function called project
-        >Un+1 = project(dt, Ub)
-    */
-
-    real t = 0;
-
-    while(t < _dt)
+    for(MG_Particle p : m_MACGrid.m_particles)
     {
-        //Calculate our substep
-        real subStep = cfl();
-
-        //Add gravity and stuff
-        //Per particle calculation
-        addBodyForce();
-
-        updateGrid();
-
-        //Per cell
-        project(_dt);
-
-        //Per particle
-        //advect the velocity field
-        advectVelocityField(_dt);
-
-
-        t += subStep;
+        p.vel = m_MACGrid.getCell(p.cellidx).oldVelField - m_MACGrid.getCell(p.cellidx).velField;
     }
 }
 
@@ -294,9 +336,12 @@ void FlipSim::advectVelocityField(real _dt)
         m_MACGrid.tracePoint(p.pos, _dt);
 }
 
-void FlipSim::addBodyForce()
+void FlipSim::addBodyForce(real _dt)
 {
-
+    for(MG_Cell c : m_MACGrid.m_cells)
+    {
+        c.velField += _dt*m_g;
+    }
 }
 
 void FlipSim::project(real _dt)
