@@ -118,6 +118,8 @@ real invLerp(real _a, real _b, real _l);
 
 real trilerp(std::vector<real> V, real x, real y, real z);
 
+bool isInBounds(uvec3 _a, uvec3 _b, uvec3 _c);
+
 }
 
 

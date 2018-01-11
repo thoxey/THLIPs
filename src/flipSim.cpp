@@ -1,14 +1,14 @@
 #include "flipSim.h"
 
-FlipSim::FlipSim(uvec3 _size):m_MACGrid(_size)
+FlipSim::FlipSim(uvec3 _size, real _cellWidth, uvec3 _b, uvec3 _c):m_MACGrid(_size, _cellWidth)
 {
-    m_dx = m_MACGrid.h;
+    m_dx = _cellWidth;
 
-}
+    m_iSize = _size.x;
+    m_jSize = _size.y;
+    m_kSize = _size.z;
 
-FlipSim::FlipSim(uint _i, uint _j, uint _k): m_MACGrid(_i, _j, _k)
-{
-    ;
+    m_MACGrid.initialiseCells(_b, _c);
 }
 
 void FlipSim::step(real _dt)
@@ -55,6 +55,23 @@ void FlipSim::step(real _dt)
     }
 }
 
+
+real FlipSim::cfl()
+{
+    real ret = 0.0;
+    real umax = m_MACGrid.getMaxSpeed() + (std::sqrt(5*m_dx*m_g.y));
+    ret = (5*m_dx)/umax;
+    return ret * m_k_cfl;
+}
+
+void FlipSim::addBodyForce(real _dt)
+{
+    for(MG_Cell c : m_MACGrid.m_cells)
+    {
+        c.velField += _dt*m_g;
+    }
+}
+
 void FlipSim::updateGrid()
 {
     for(uint k = 0; k < m_kSize; k++)
@@ -95,7 +112,13 @@ void FlipSim::updateGrid()
             }
         }
     }
+}
 
+void FlipSim::project(real _dt)
+{
+    calculateNegativeDivergence();
+    calculatePressure(_dt);
+    applyPressure(_dt);
 }
 
 void FlipSim::calculateNegativeDivergence()
@@ -114,7 +137,7 @@ void FlipSim::calculateNegativeDivergence()
                         real uip1 = 0.0;
                         real vjp1 = 0.0;
                         real wkp1 = 0.0;
-                        std::vector<MG_Cell> neighbors;
+                        std::vector<MG_Cell> neighbors = m_MACGrid.getNeighbors(c);
 
                         if(neighbors[RIGHT].type == FLUID)
                             uip1 = neighbors[RIGHT].u();
@@ -336,25 +359,7 @@ void FlipSim::advectVelocityField(real _dt)
         m_MACGrid.tracePoint(p.pos, _dt);
 }
 
-void FlipSim::addBodyForce(real _dt)
-{
-    for(MG_Cell c : m_MACGrid.m_cells)
-    {
-        c.velField += _dt*m_g;
-    }
-}
-
-void FlipSim::project(real _dt)
-{
-    calculateNegativeDivergence();
-    calculatePressure(_dt);
-    applyPressure(_dt);
-}
 
 
-real FlipSim::cfl()
-{
-    real ret = 0.0;
-    ret = m_MACGrid.h/m_MACGrid.getMaxSpeed();
-    return ret * m_k_cfl;
-}
+
+

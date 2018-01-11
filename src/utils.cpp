@@ -52,4 +52,18 @@ real randRange(real _min, real _max)
 
     return uniform_dist(e);
 }
+
+//....c
+//.....
+//b....
+bool isInBounds(uvec3 _a, uvec3 _b, uvec3 _c)
+{
+    if(_a.x > _b.x && _a.x < _c.x &&
+       _a.y > _b.y && _a.y < _c.y &&
+       _a.z > _b.y && _a.z < _c.y)
+        return true;
+    else
+        return false;
+}
+
 }

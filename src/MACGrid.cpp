@@ -1,17 +1,12 @@
 #include "MACGrid.h"
 
-MACGrid::MACGrid(uvec3 _size)
+MACGrid::MACGrid(uvec3 _size, real _cellWidth)
 {
     m_i_length = _size.x;
     m_j_length = _size.y;
     m_k_length = _size.y;
-}
 
-MACGrid::MACGrid(uint _i, uint _j, uint _k)
-{
-    m_i_length = _i;
-    m_j_length = _j;
-    m_k_length = _k;
+    h = _cellWidth;
 }
 
 vec3 MACGrid::getJitteredPos(MG_Cell _c, uint _count)
@@ -87,16 +82,41 @@ uint MACGrid::generateKey(uvec3 _pos)
     return 541*_pos.x+79*_pos.y+31*_pos.z;
 }
 
-void MACGrid::initialiseCell(MG_Cell _c, uvec3 _pos)
+
+void MACGrid::initialiseCells(uvec3 _b, uvec3 _c)
+{
+    for(uint k = 0; k < m_k_length; k++)
+    {
+        for(uint j = 0; j < m_j_length; j++)
+        {
+            for(uint i = 0; i < m_i_length; i++)
+            {
+                MG_Cell c;
+                if(i == 0 || i == m_i_length-1 || j == 0 || j == m_j_length-1 || k == 0 || k == m_k_length-1)
+                    initialiseCell(c, uvec3(i,j,k), SOLID);
+                else if(utility::isInBounds(uvec3(i,j,k), _b, _c))
+                {
+                    initialiseCellWithFluid(c, uvec3(i,j,k));
+                }
+                else
+                    initialiseCell(c, uvec3(i,j,k), AIR);
+            }
+        }
+    }
+}
+
+void MACGrid::initialiseCell(MG_Cell _c, uvec3 _pos, cellType _t)
 {
     _c.gridPos = _pos;
     _c.key = generateKey(_pos);
+    _c.type = _t;
 }
 
 void MACGrid::initialiseCellWithFluid(MG_Cell _c, uvec3 _pos)
 {
     _c.gridPos = _pos;
     _c.key = generateKey(_pos);
+    _c.type = FLUID;
     for(uint i = 0; i < 8; i++)
     {
         MG_Particle p;
@@ -128,11 +148,6 @@ std::vector<MG_Cell> MACGrid::getNeighbors(MG_Cell _c)
     return ret;
 }
 
-bool MACGrid::checkInBounds(MG_Cell _c)
-{
-    return true;
-}
-
 real MACGrid::getMaxSpeed()
 {
     real maxSpeed = 0.0;
@@ -142,6 +157,7 @@ real MACGrid::getMaxSpeed()
         maxSpeed = std::max(maxSpeed, p.vel.y);
         maxSpeed = std::max(maxSpeed, p.vel.z);
     }
+    return maxSpeed;
 }
 /*
                 // Trace a particle from point (x, y, z) for t time using RK2.
@@ -234,10 +250,6 @@ bool MACGrid::checkForCell(uvec3 _pos, MG_Cell& _c)
     }
 }
 
-bool MACGrid::checkForCell(MG_Particle _p)
-{
-    return true;
-}
 
 MG_Cell MACGrid::getCell(uint _key)
 {
