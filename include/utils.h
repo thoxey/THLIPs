@@ -6,6 +6,7 @@
 #include<unordered_map>
 #include<cmath>
 #include<random>
+#include<iostream>
 
 #include<glm/vec3.hpp>
 
@@ -20,7 +21,7 @@
 /// @date 19/01/17 Initial version
 //----------------------------------------------------------------------------------------------------------------------
 
-//#define USE_DOUBLE_PRECISION
+#define USE_DOUBLE_PRECISION
 //-fsingle-precision-constant
 #ifdef USE_DOUBLE_PRECISION
 typedef double real;
@@ -55,16 +56,26 @@ struct MG_Cell
     //Fig 5.3 Bridsons book
     real rhs;
 
-    MG_Cell(uvec3 _pos, vec3 _velField, real _p)
+    uint fluidIDX;
+
+    MG_Cell(uvec3 _pos)
     {
         gridPos = _pos;
         key = 541*_pos.x+79*_pos.y+31*_pos.z;
 
-        velField = _velField;
-
-        _p = p;
+        velField = vec3(0.0,0.0,0.0);
+        oldVelField = velField;
+        p = 0;
     }
-    MG_Cell(){}
+    MG_Cell()
+    {
+        type = SOLID;
+
+        velField = vec3(0.0,0.0,0.0);
+        oldVelField = velField;
+
+        p = 0;
+    }
     real u()
     {
         return velField.x;
@@ -78,6 +89,10 @@ struct MG_Cell
         return velField.z;
     }
 
+    void updateVel(vec3 _newVel)
+    {
+        velField = _newVel;
+    }
 };
 
 struct MG_Particle
@@ -87,6 +102,17 @@ struct MG_Particle
     vec3 vel;
 
     uint cellidx;
+
+    MG_Particle()
+    {
+        pos = vec3(0,0,0);
+        vel = vec3(0,0,0);
+    }
+
+    void updatePos(vec3 _newPos)
+    {
+        pos = _newPos;
+    }
 
 };
 
@@ -119,6 +145,10 @@ real invLerp(real _a, real _b, real _l);
 real trilerp(std::vector<real> V, real x, real y, real z);
 
 bool isInBounds(uvec3 _a, uvec3 _b, uvec3 _c);
+
+void printvec(uvec3 _x);
+
+void printvec(vec3 _x);
 
 }
 

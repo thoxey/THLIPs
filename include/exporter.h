@@ -3,27 +3,19 @@
 
 #include <sstream>
 #include <fstream>
-#include <iostream>
 
 #include "utils.h"
 
-class Exporter
+namespace exporter
 {
-public:
-    //----------------------------------------------------------------------------------------------------------------------
-    /// @brief ctor
-    //----------------------------------------------------------------------------------------------------------------------
-    Exporter(std::vector<MG_Particle> _particles);
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Export particles to Houdini Geo format, code from ///https://github.com/NCCA/SimulationExports/blob/master/HoudiniGeo/src/Emitter.cpp
     //----------------------------------------------------------------------------------------------------------------------
-    void exportToHoudini(uint _frameNumber);
+    void exportToHoudini(uint _frameNumber, std::vector<MG_Particle> _particles);
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Export particles to OBJ format
     //----------------------------------------------------------------------------------------------------------------------
-    void exportToOBJ(uint _frameNumber);
+    void exportToOBJ(uint _frameNumber, std::vector<MG_Particle> _particles);
 
-private:
-    std::vector<MG_Particle> m_particles;
 };
 #endif

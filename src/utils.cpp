@@ -4,7 +4,7 @@ namespace utility
 {
 uint getIndex(uint _length, MG_Cell _c)
 {
-    return _c.gridPos.x*_length*_length+_c.gridPos.y*_length+_c.gridPos.z;
+    return _c.gridPos.x+(_length*_c.gridPos.y)+(_length*_length*_c.gridPos.z);
 }
 
 real lerp(real _a, real _b, real _x)
@@ -66,4 +66,13 @@ bool isInBounds(uvec3 _a, uvec3 _b, uvec3 _c)
         return false;
 }
 
+void printvec(uvec3 _x)
+{
+    std::cout<<"X:"<<_x.x<<" Y: "<<_x.y<<" Z: "<<_x.z<<"\n";
+}
+
+void printvec(vec3 _x)
+{
+    std::cout<<"X:"<<_x.x<<" Y: "<<_x.y<<" Z: "<<_x.z<<"\n";
+}
 }

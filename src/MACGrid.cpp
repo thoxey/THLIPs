@@ -91,28 +91,24 @@ void MACGrid::initialiseCells(uvec3 _b, uvec3 _c)
         {
             for(uint i = 0; i < m_i_length; i++)
             {
-                MG_Cell c;
+                MG_Cell c = MG_Cell(uvec3(i,j,k));
                 if(i == 0 || i == m_i_length-1 || j == 0 || j == m_j_length-1 || k == 0 || k == m_k_length-1)
-                    initialiseCell(c, uvec3(i,j,k), SOLID);
+                    c.type = SOLID;
                 else if(utility::isInBounds(uvec3(i,j,k), _b, _c))
                 {
                     initialiseCellWithFluid(c, uvec3(i,j,k));
                 }
                 else
-                    initialiseCell(c, uvec3(i,j,k), AIR);
+                    c.type = AIR;
+
+                insertCellInHashTable(c);
+                m_cells.push_back(c.key);
             }
         }
     }
 }
 
-void MACGrid::initialiseCell(MG_Cell _c, uvec3 _pos, cellType _t)
-{
-    _c.gridPos = _pos;
-    _c.key = generateKey(_pos);
-    _c.type = _t;
-}
-
-void MACGrid::initialiseCellWithFluid(MG_Cell _c, uvec3 _pos)
+void MACGrid::initialiseCellWithFluid(MG_Cell& _c, uvec3 _pos)
 {
     _c.gridPos = _pos;
     _c.key = generateKey(_pos);
@@ -124,6 +120,7 @@ void MACGrid::initialiseCellWithFluid(MG_Cell _c, uvec3 _pos)
         p.pos = getJitteredPos(_c, i);
         m_particles.push_back(p);
     }
+
 }
 
 std::vector<MG_Cell> MACGrid::getNeighbors(MG_Cell _c)
@@ -132,18 +129,31 @@ std::vector<MG_Cell> MACGrid::getNeighbors(MG_Cell _c)
     ret.reserve(6);
     uvec3 centre = _c.gridPos;
     MG_Cell tmp;
+    MG_Cell empty;
     if(checkForCell(centre + uleftVec, tmp))
-        ret[LEFT]=tmp;
+        ret.push_back(tmp);
+    else
+        ret.push_back(empty);
     if(checkForCell(centre + urightVec, tmp))
-        ret[RIGHT]=tmp;
+        ret.push_back(tmp);
+    else
+        ret.push_back(empty);
     if(checkForCell(centre + uupVec, tmp))
-        ret[UP]=tmp;
+        ret.push_back(tmp);
+    else
+        ret.push_back(empty);
     if(checkForCell(centre + udownVec, tmp))
-        ret[DOWN]=tmp;
+        ret.push_back(tmp);
+    else
+        ret.push_back(empty);
     if(checkForCell(centre + uforwardVec, tmp))
-        ret[FORWARD]=tmp;
+        ret.push_back(tmp);
+    else
+        ret.push_back(empty);
     if(checkForCell(centre + ubackwardVec, tmp))
-        ret[BACKWARD]=tmp;
+        ret.push_back(tmp);
+    else
+        ret.push_back(empty);
 
     return ret;
 }
@@ -170,7 +180,9 @@ vec3 MACGrid::tracePoint(vec3 _p, real _t)
 {
     vec3 V = getVelocity(_p);
 
+    utility::printvec(V);
     V = getVelocity(vec3(_p.x+0.5f*_t*V.x, _p.y+0.5f*_t*V.y, _p.z+0.5f*_t*V.z));
+    utility::printvec(V);
 
     return _p + _t*V;
 }
@@ -215,7 +227,7 @@ real MACGrid::getInterpolatedValue(vec3 _v, uint idx)
     int k = std::floor(_v.z);
 
     //I've tripled checked, but come back here if there are mistakes
-    return (i+1-_v.x) * (j+1-_v.y) * (k+1-_v.z) * getCell(i, j, k).velField[idx] +
+    real ret = (i+1-_v.x) * (j+1-_v.y) * (k+1-_v.z) * getCell(i, j, k).velField[idx] +
             (_v.x - i) * (j+1 - _v.y) * (k+1-_v.z) * getCell(i+1, j, k).velField[idx] +
             (i+1-_v.x) * (_v.y - j) * (k+1-_v.z) * getCell(i, j+1, k).velField[idx] +
             (_v.x - i) * (_v.y - j) * (k+1-_v.z) * getCell(i+1, j+1, k).velField[idx] +
@@ -223,6 +235,7 @@ real MACGrid::getInterpolatedValue(vec3 _v, uint idx)
             (_v.x - i) * (j+1 - _v.y) * (_v.z - k) * getCell(i+1, j, k+1).velField[idx] +
             (i+1 - _v.x) * (_v.y - j) * (_v.z - k) * getCell(i, j+1, k+1).velField[idx] +
             (_v.x - i) * (_v.y - j) * (_v.z - k) * getCell(i+1, j+1, k+1).velField[idx];
+    return ret;
 }
 
 bool MACGrid::checkForCell(uint _i, uint _j, uint _k, MG_Cell& _c)
@@ -253,25 +266,47 @@ bool MACGrid::checkForCell(uvec3 _pos, MG_Cell& _c)
 
 MG_Cell MACGrid::getCell(uint _key)
 {
-    std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(_key);
-    return ret->second;
+    auto ret = m_hashTable.find(_key);
+    if(ret != m_hashTable.end())
+        return ret->second;
+    else
+    {
+        MG_Cell c;
+        return c;
+    }
 }
 
 MG_Cell MACGrid::getCell(uint _i, uint _j, uint _k)
 {
-    std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_i,_j,_k));
-    return ret->second;
+    auto ret = m_hashTable.find(generateKey(_i,_j,_k));
+    if(ret != m_hashTable.end())
+        return ret->second;
+    else
+    {
+        MG_Cell c;
+        return c;
+    }
 }
 
 MG_Cell MACGrid::getCell(uvec3 _pos)
 {
-    std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_pos.x,_pos.y,_pos.z));
-    return ret->second;
+    auto ret = m_hashTable.find(generateKey(_pos.x,_pos.y,_pos.z));
+    if(ret != m_hashTable.end())
+        return ret->second;
+    else
+    {
+        MG_Cell c;
+        return c;
+    }
 }
 
 void MACGrid::insertCellInHashTable(MG_Cell _c)
 {
-    m_hashTable.emplace(_c.key, _c);
+    auto test = m_hashTable.find(_c.key);
+    if(test != m_hashTable.end())
+        test->second = _c;
+    else
+        m_hashTable.emplace(_c.key, _c);
 }
 
 vec3 MACGrid::getCellPos(MG_Cell _c)

@@ -1,6 +1,6 @@
 #include <iostream>
 #include"flipSim.h"
-
+#include"exporter.h"
 /*
   TO DO:
   -FINISH DOC TAGS (always)
@@ -16,11 +16,32 @@ int main()
 {
     std::cout<<"Starting THLIPs... \n";
 
-    FlipSim flipSim = FlipSim(uvec3(100, 100, 100), 0.1, uvec3(90, 90, 90), uvec3(100,100,100));
+    FlipSim flipSim = FlipSim(uvec3(10, 10, 10), 0.1, uvec3(0, 0, 5), uvec3(10,10,10));
+
+//    std::vector<MG_Particle> test;
+//    for(uint i = 0; i < 500; i++)
+//    {
+//        real x = utility::randRange(20.0);
+//        real y = utility::randRange(20.0);
+//        real z = utility::randRange(20.0);
+//        MG_Particle p;
+//        p.pos = vec3(x,y,z);
+//        test.push_back(p);
+//    }
 
     for(uint i = 0; i < 100; i++)
     {
         flipSim.step(i);
+        exporter::exportToHoudini(i, flipSim.getParticles());
+//        for(uint i = 0; i < test.size(); i++)
+//        {
+//            real x = utility::randRange(20.0);
+//            real y = utility::randRange(20.0);
+//            real z = utility::randRange(20.0);
+//            test[i].pos = vec3(x,y,z);
+//        }
+//        exporter::exportToHoudini(i, test);
+        std::cout<<"Finished Exporting Frame: "<<i<<std::endl;
     }
 
     std::cout<<"THLIPs Finished! \n";

@@ -1,12 +1,8 @@
 #include "exporter.h"
-
-Exporter::Exporter(std::vector<MG_Particle> _particles):m_particles(_particles)
+namespace exporter
 {
-    ;
-}
-
 /// This function was originally written by Jon Macey
-void Exporter::exportToHoudini(uint _frameNumber)
+void exportToHoudini(uint _frameNumber, std::vector<MG_Particle> _particles)
 {
         char fname[50];
         std::sprintf(fname,"geo/THLIPSparticle.%03d.geo",_frameNumber++);
@@ -21,7 +17,7 @@ void Exporter::exportToHoudini(uint _frameNumber)
         }
         // write header see here http://www.sidefx.com/docs/houdini15.0/io/formats/geo
         ss << "PGEOMETRY V5\n";
-        ss << "NPoints " << m_particles.size() << " NPrims 1\n";
+        ss << "NPoints " << _particles.size() << " NPrims 1\n";
         ss << "NPointGroups 0 NPrimGroups 1\n";
         // this is hard coded but could be flexible we have 1 attrib which is Colour
         ss << "NPointAttrib 1  NVertexAttrib 0 NPrimAttrib 2 NAttrib 0\n";
@@ -31,18 +27,18 @@ void Exporter::exportToHoudini(uint _frameNumber)
         ss <<"Cd 3 float 1 1 1\n";
         // now we write out the particle data in the format
         // x y z 1 (attrib so in this case colour)
-        for(unsigned int i=0; i<m_particles.size(); ++i)
+        for(unsigned int i=0; i<_particles.size(); ++i)
         {
-            ss<<m_particles[i].pos.x<<" "<<m_particles[i].pos.y<<" "<<m_particles[i].pos.z << " 1 ";
-            ss<<"("<<m_particles[i].vel.x<<" "<<m_particles[i].vel.y<<" "<< m_particles[i].vel.z<<")\n";
+            ss<<_particles[i].pos.x<<" "<<_particles[i].pos.y<<" "<<_particles[i].pos.z << " 1 ";
+            ss<<"("<<_particles[i].vel.x<<" "<<_particles[i].vel.y<<" "<< _particles[i].vel.z<<")\n";
         }
 
         // now write out the index values
         ss<<"PrimitiveAttrib\n";
         ss<<"generator 1 index 1 location1\n";
         ss<<"dopobject 1 index 1 /obj/AutoDopNetwork:1\n";
-        ss<<"Part "<<m_particles.size()<<" ";
-        for(size_t i=0; i<m_particles.size(); ++i)
+        ss<<"Part "<<_particles.size()<<" ";
+        for(size_t i=0; i<_particles.size(); ++i)
         {
             ss<<i<<" ";
         }
@@ -56,7 +52,8 @@ void Exporter::exportToHoudini(uint _frameNumber)
         file.close();
 }
 /// end of function
-void Exporter::exportToOBJ(uint _frameNumber)
+
+void exportToOBJ(uint _frameNumber, std::vector<MG_Particle> _particles)
 {
         char fname[50];
         std::sprintf(fname,"geo/THLIPSparticle.%03d.obj",_frameNumber++);
@@ -69,9 +66,10 @@ void Exporter::exportToOBJ(uint _frameNumber)
             std::cerr << "failed to Open file "<<fname<<'\n';
             exit(EXIT_FAILURE);
         }
-        for(MG_Particle p : m_particles)
+        for(MG_Particle p : _particles)
         ss<<"v" <<" "<< p.pos.x <<" "<< p.pos.y <<" "<< p.pos.z<<"\n";
         // dump string stream to disk;
         file<<ss.rdbuf();
         file.close();
+}
 }
