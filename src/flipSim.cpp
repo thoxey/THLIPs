@@ -206,9 +206,10 @@ void FlipSim::calculatePressure(real _dt)
         {
             n_fluidCells++;
             fluidCellKeys.push_back(c);
-            MG_Cell tmp = m_MACGrid.getCell(c);
-            tmp.fluidIDX = fluidIDX++;
-            m_MACGrid.insertCellInHashTable(tmp);
+//            MG_Cell tmp = m_MACGrid.getCell(c);
+//            tmp.fluidIDX = fluidIDX++;
+//            m_MACGrid.insertCellInHashTable(tmp);
+            m_MACGrid.getCell(c).updateFluidIDX(fluidIDX++);
         }
 
     //Coeff Matrix

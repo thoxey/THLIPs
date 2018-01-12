@@ -93,6 +93,10 @@ struct MG_Cell
     {
         velField = _newVel;
     }
+    void updateFluidIDX(uint _newIDX)
+    {
+        fluidIDX = _newIDX;
+    }
 };
 
 struct MG_Particle
