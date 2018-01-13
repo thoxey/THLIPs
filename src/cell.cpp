@@ -22,7 +22,7 @@ void Cell::setU(real _newU)
 
 real Cell::W()
 {
-    return velField.y;
+    return velField.z;
 }
 
 void Cell::setV(real _newV)
@@ -32,7 +32,7 @@ void Cell::setV(real _newV)
 
 real Cell::V()
 {
-    return velField.z;
+    return velField.y;
 }
 
 void Cell::setW(real _newW)
@@ -58,4 +58,9 @@ uint Cell::getIDX(uint _length)
 vec3 Cell::getDeltaVel()
 {
     return velField - oldVelField;
+}
+
+vec3 Cell::getVelField() const
+{
+    return velField;
 }

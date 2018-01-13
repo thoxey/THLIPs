@@ -4,7 +4,7 @@ namespace utils
 {
 uint getIndex(uint _length, uvec3 _pos)
 {
-    return (_length*_length*_pos.x)+(_length*_pos.y)+_pos.z;
+    return _pos.x+(_length*_pos.y)+(_length*_length*_pos.z);
 }
 
 real lerp(real _a, real _b, real _x)
@@ -17,19 +17,19 @@ real invLerp(real _a, real _b, real _l)
     return -(_l - _a)/(_a+_b);
 }
 
-real trilerp(std::vector<real> V, real x, real y, real z)
+real trilerp(real *V, real x, real y, real z)
 {
     //Is are 1s and Os are 0s, based on notation here:
     //http://paulbourke.net/miscellaneous/interpolation/
     enum corners {OOO, IOO, OIO, OOI, IOI, OII, IIO, III};
     return (V[OOO] * (1-x) * (1-y) *1-z) +
-           (V[IOO] * (1-y) * (1-z)) +
-           (V[OIO] * (1-x) * y * (1-z)) +
-           (V[OOI] * (1-x) * (1-y) * z) +
-           (V[IOI] * x * (1-y) * z) +
-           (V[OII] * (1-x) * y * z) +
-           (V[IIO] * x * y * (1-z)) +
-           (V[III] * x * y *z);
+            (V[IOO] * (1-y) * (1-z)) +
+            (V[OIO] * (1-x) * y * (1-z)) +
+            (V[OOI] * (1-x) * (1-y) * z) +
+            (V[IOI] * x * (1-y) * z) +
+            (V[OII] * (1-x) * y * z) +
+            (V[IIO] * x * y * (1-z)) +
+            (V[III] * x * y * z);
 }
 
 real randRange(real _max)
@@ -56,11 +56,11 @@ real randRange(real _min, real _max)
 //....c
 //.....
 //b....
-bool isInBounds(uvec3 _a, uvec3 _b, uvec3 _c)
+bool isInBounds(vec3 _a, vec3 _b, vec3 _c)
 {
     if(_a.x > _b.x && _a.x < _c.x &&
-       _a.y > _b.y && _a.y < _c.y &&
-       _a.z > _b.y && _a.z < _c.y)
+            _a.y > _b.y && _a.y < _c.y &&
+            _a.z > _b.z && _a.z < _c.z)
         return true;
     else
         return false;
@@ -94,5 +94,28 @@ real divergentVelocity(real _v1, real _v2, real _dx)
 {
     return (_v1-_v2)/_dx;
 }
+
+//--------------------------------------------------
+//A Runge-Kutta Method for solving Differential Equations
+//of the form y'=f(x,y)
+//--------------------------------------------------
+
+real runge(real x, real y, real _dt)
+{
+    real K1    = (_dt * f(x,y));
+    real K2    = (_dt * f((x + 1 / 2 * _dt), (y + 1 / 2 * K1)));
+    real K3    = (_dt * f((x + 1 / 2 * _dt), (y + 1 / 2 * K2)));
+    real K4    = (_dt * f((x + _dt), (y + K3)));
+    real runge = (y + (1 / 6) * (K1 + 2 * K2 + 2 * K3 + K4));
+    return runge;
+}
+
+real f(real x, real y)
+{
+    real f = x+y;
+    return f;
+}
+//End Reference
+
 
 }

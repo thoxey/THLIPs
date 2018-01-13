@@ -68,12 +68,12 @@ vec3 MACGrid::getJitteredPos(Cell _c, uint _count)
 
 vec3 MACGrid::getCellPos(Cell _c)
 {
-    return vec3(_c.gridPos.x * m_h + 0.5 * m_h, _c.gridPos.y * m_h + 0.5 * m_h, _c.gridPos.z * m_h + 0.5 * m_h);
+    return vec3(_c.gridPos.x * m_h, _c.gridPos.y * m_h, _c.gridPos.z * m_h);
 }
 
 void MACGrid::reclassifyCells()
 {
-    for(Cell c : m_cells)
+    for(auto&& c : m_cells)
     {
         //Solid cells wont change so skip
         if(c.type == SOLID)
@@ -83,9 +83,12 @@ void MACGrid::reclassifyCells()
         c.m_paticleIDXs.clear();
         c.type = AIR;
 
-        for(Particle p : m_particles)
+        for(auto&& p : m_particles)
         {
-            if(utils::isInBounds(getCellPos(c)-vec3(m_h/2), getCellPos(c)+vec3(m_h/2), p.pos))
+            vec3 cell000 = getCellPos(c);
+            vec3 cell111 = getCellPos(c)+vec3(m_h);
+
+            if(utils::isInBounds(p.pos, cell000, cell111))
             {
                 c.type = FLUID;
                 c.m_paticleIDXs.push_back(p.idx);
@@ -133,16 +136,16 @@ void MACGrid::initialiseCellWithFluid(Cell _c)
 
 }
 
-std::vector<Cell> MACGrid::getNeighbors(Cell _c)
+int * MACGrid::getNeighbors(Cell _c)
 {
-    std::vector<Cell> ret;
-    uvec3 refPos = _c.gridPos;
-    ret.push_back(getCell(refPos + uleftVec));
-    ret.push_back(getCell(refPos + urightVec));
-    ret.push_back(getCell(refPos + uupVec));
-    ret.push_back(getCell(refPos + udownVec));
-    ret.push_back(getCell(refPos + uforwardVec));
-    ret.push_back(getCell(refPos + ubackwardVec));
+    int * ret = (int *) malloc(6);
+    uvec3 refPos  = _c.gridPos;
+    ret[LEFT]     = utils::getIndex(m_gridLength, getCell(refPos - uleftVec).gridPos);
+    ret[RIGHT]    = utils::getIndex(m_gridLength, getCell(refPos - urightVec).gridPos);
+    ret[UP]       = utils::getIndex(m_gridLength, getCell(refPos - uupVec).gridPos);
+    ret[DOWN]     = utils::getIndex(m_gridLength, getCell(refPos - udownVec).gridPos);
+    ret[FORWARD]  = utils::getIndex(m_gridLength, getCell(refPos - uforwardVec).gridPos);
+    ret[BACKWARD] = utils::getIndex(m_gridLength, getCell(refPos - ubackwardVec).gridPos);
     return ret;
 }
 
@@ -161,13 +164,16 @@ real MACGrid::getInterpolatedValue(real _a, real _b, real _c)
 }
 
 
-Cell MACGrid::getCell(uint _i, uint _j, uint _k)
+Cell & MACGrid::getCell(uint _i, uint _j, uint _k)
 {
-    uint i = utils::getIndex(m_h, uvec3(_i,_j,_k));
-    if(m_cells.size() < i && i > 0)
+    uint i = utils::getIndex(m_gridLength, uvec3(_i,_j,_k));
+    if(i < m_cells.size())
         return m_cells[i];
     else
-        return Cell(uvec3(_i,_j,_k));
+    {
+        Cell c = Cell(uvec3(_i,_j,_k));
+        return c;
+    }
 }
 
 Cell MACGrid::getCell(uvec3 _pos)
@@ -176,6 +182,9 @@ Cell MACGrid::getCell(uvec3 _pos)
     if(m_cells.size() < i && i > 0)
         return m_cells[i];
     else
-        return Cell(_pos);
+    {
+        Cell c = Cell(_pos);
+        return c;
+    }
 }
 

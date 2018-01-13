@@ -29,7 +29,7 @@ int main()
 //        test.push_back(p);
 //    }
 
-    for(uint i = 0; i < 20; i++)
+    for(uint i = 0; i < 100; i++)
     {
         flipSim.step(0.0025);
         exporter::exportToHoudini(i, flipSim.getParticles());

@@ -98,16 +98,8 @@ void FlipSim::updateGrid()
 
 void FlipSim::addBodyForce(real _dt)
 {
-    for(uint k = 0; k < m_gridLength; k++)
-    {
-        for(uint j = 0; j < m_gridLength; j++)
-        {
-            for(uint i = 0; i < m_gridLength; i++)
-            {
-                m_Grid.getCell(i,j,k).updateVel(m_g * _dt);
-            }
-        }
-    }
+    for(auto&& c : m_Grid.m_cells)
+        c.updateVel(m_g * _dt);
 }
 
 void FlipSim::project(real _dt)
@@ -125,24 +117,24 @@ void FlipSim::enforceDirichlet()
         {
             for(uint i = 0; i < m_gridLength; i++)
             {
-                Cell c = m_Grid.getCell(i,j,k);
-                std::vector<Cell> neighbors = m_Grid.getNeighbors(c);
+                uint idx = utils::getIndex(m_gridLength, uvec3(i,j,k));
+                int * neighbors = m_Grid.getNeighbors(m_Grid.m_cells[idx]);
                 //If we are neighboring/are a SOLID dont add velocity into the solid
 
                 // X velocity
-                if((c.type  == SOLID && c.U() > 0) || (neighbors[LEFT].type == SOLID && c.U() < 0))
+                if((m_Grid.m_cells[idx].type  == SOLID && m_Grid.m_cells[idx].U() > 0) || (m_Grid.m_cells[neighbors[LEFT]].type == SOLID && m_Grid.m_cells[idx].U() < 0))
                 {
-                    c.setU(0.0);
+                    m_Grid.m_cells[idx].setU(0.0);
                 }
                 // Y velocity
-                if((c.type  == SOLID && c.V() > 0) || (neighbors[DOWN].type == SOLID && c.V() < 0))
+                if((m_Grid.m_cells[idx].type  == SOLID && m_Grid.m_cells[idx].V() > 0) || (m_Grid.m_cells[neighbors[DOWN]].type == SOLID && m_Grid.m_cells[idx].V() < 0))
                 {
-                    c.setV(0.0);
+                    m_Grid.m_cells[idx].setV(0.0);
                 }
                 // Z velocity
-                if((c.type  == SOLID && c.W() > 0) || (neighbors[BACKWARD].type == SOLID && c.W() < 0))
+                if((m_Grid.m_cells[idx].type  == SOLID && m_Grid.m_cells[idx].W() > 0) || (m_Grid.m_cells[neighbors[BACKWARD]].type == SOLID && m_Grid.m_cells[idx].W() < 0))
                 {
-                    c.setW(0.0);
+                    m_Grid.m_cells[idx].setW(0.0);
                 }
             }
         }
@@ -153,11 +145,10 @@ void FlipSim::calculatePressure(real _dt)
 {
     uint n_fluidCells = 0;
     std::vector<int> fluidIDXs;
-    for(Cell c : m_Grid.m_cells)
+    for(auto&& c : m_Grid.m_cells)
     {
         if(c.type == FLUID)
         {
-            c.fluidIDX = n_fluidCells;
             fluidIDXs.push_back(n_fluidCells++);
         }
         else
@@ -173,7 +164,7 @@ void FlipSim::calculatePressure(real _dt)
     //Divergence
     VectorX b(n_fluidCells);
 
-    real scale = 1/(_dt*_dt);
+    real scale = 1/(_dt);
 
     for(uint k = 0; k < m_gridLength; k++)
     {
@@ -183,65 +174,88 @@ void FlipSim::calculatePressure(real _dt)
             {
                 if(fluidIDXs[utils::getIndex(m_gridLength, uvec3(i,j,k))] != -1)
                 {
-                    uint idx = m_Grid.getCell(i,j,k).fluidIDX;
+                    uint idx = fluidIDXs[utils::getIndex(m_gridLength, uvec3(i,j,k))];
                     uint n_NonSolidNeighbors = 0;
-                    std::vector<Cell> neighbors = m_Grid.getNeighbors(m_Grid.getCell(i, j, k));
+                    int * neighbor = m_Grid.getNeighbors(m_Grid.getCell(i, j, k));
 
-                    if(neighbors[LEFT].type != SOLID)
+                    if(m_Grid.m_cells[neighbor[LEFT]].type != SOLID)
                     {
-                        if(neighbors[LEFT].type == FLUID)
+                        if(m_Grid.m_cells[neighbor[LEFT]].type == FLUID)
                         {
-                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[LEFT].gridPos)], idx) = scale;
+                            A.insert(fluidIDXs[neighbor[LEFT]], idx) = scale;
                         }
                         n_NonSolidNeighbors++;
                     }
-                    if(neighbors[RIGHT].type != SOLID)
+                    if(m_Grid.m_cells[neighbor[RIGHT]].type != SOLID)
                     {
-                        if(neighbors[RIGHT].type == FLUID)
+                        if(m_Grid.m_cells[neighbor[RIGHT]].type == FLUID)
                         {
-                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[RIGHT].gridPos)], idx) = scale;
-                        }
-                        n_NonSolidNeighbors++;
-                    }
-
-                    if(neighbors[DOWN].type != SOLID)
-                    {
-                        if(neighbors[DOWN].type == FLUID)
-                        {
-                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[DOWN].gridPos)], idx) = scale;
-                        }
-                        n_NonSolidNeighbors++;
-                    }
-                    if(neighbors[UP].type != SOLID)
-                    {
-                        if(neighbors[UP].type == FLUID)
-                        {
-                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[UP].gridPos)], idx) = scale;
+                            A.insert(fluidIDXs[neighbor[RIGHT]], idx) = scale;
                         }
                         n_NonSolidNeighbors++;
                     }
 
-                    if(neighbors[BACKWARD].type != SOLID)
+                    if(m_Grid.m_cells[neighbor[DOWN]].type != SOLID)
                     {
-                        if(neighbors[BACKWARD].type == FLUID)
+                        if(m_Grid.m_cells[neighbor[DOWN]].type == FLUID)
                         {
-                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[BACKWARD].gridPos)], idx) = scale;
+                            A.insert(fluidIDXs[neighbor[DOWN]], idx) = scale;
                         }
                         n_NonSolidNeighbors++;
                     }
-                    if(neighbors[FORWARD].type != SOLID)
+                    if(m_Grid.m_cells[neighbor[UP]].type != SOLID)
                     {
-                        if(neighbors[FORWARD].type == FLUID)
+                        if(m_Grid.m_cells[neighbor[UP]].type == FLUID)
                         {
-                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[FORWARD].gridPos)], idx) = scale;
+                            A.insert(fluidIDXs[neighbor[UP]], idx) = scale;
                         }
                         n_NonSolidNeighbors++;
                     }
 
-                    A.insert(idx, idx) = -n_NonSolidNeighbors*scale;
-                    real divergence = utils::divergentVelocity(neighbors[RIGHT].U(), m_Grid.getCell(i,j,k).U(), m_Grid.m_h);
-                    divergence += utils::divergentVelocity(neighbors[UP].V(), m_Grid.getCell(i,j,k).V(), m_Grid.m_h);
-                    divergence += utils::divergentVelocity(neighbors[FORWARD].W(), m_Grid.getCell(i,j,k).W(), m_Grid.m_h);
+                    if(m_Grid.m_cells[neighbor[BACKWARD]].type != SOLID)
+                    {
+                        if(m_Grid.m_cells[neighbor[BACKWARD]].type == FLUID)
+                        {
+                            A.insert(fluidIDXs[neighbor[BACKWARD]], idx) = scale;
+                        }
+                        n_NonSolidNeighbors++;
+                    }
+                    if(m_Grid.m_cells[neighbor[FORWARD]].type != SOLID)
+                    {
+                        if(m_Grid.m_cells[neighbor[FORWARD]].type == FLUID)
+                        {
+                            A.insert(fluidIDXs[neighbor[FORWARD]], idx) = scale;
+                        }
+                        n_NonSolidNeighbors++;
+                    }
+
+                    A.coeffRef(idx, idx) = -n_NonSolidNeighbors*scale;
+
+                    real uRight = m_Grid.m_cells[neighbor[RIGHT]].U();
+                    real u = m_Grid.m_cells[utils::getIndex(m_gridLength, uvec3(i,j,k))].U();
+                    real vUp = m_Grid.m_cells[neighbor[UP]].V();
+                    real v = m_Grid.m_cells[utils::getIndex(m_gridLength, uvec3(i,j,k))].V();
+                    real wForward = m_Grid.m_cells[neighbor[FORWARD]].W();
+                    real w = m_Grid.m_cells[utils::getIndex(m_gridLength, uvec3(i,j,k))].W();
+
+                    real divergence = scale * (uRight - u + vUp - v + wForward - w);
+
+                    //figure 5.4 Bridon's book
+                    if(m_Grid.m_cells[neighbor[LEFT]].type == SOLID)
+                        divergence -= scale * u;
+                    if(m_Grid.m_cells[neighbor[RIGHT]].type == SOLID)
+                        divergence += scale * uRight;
+
+                    if(m_Grid.m_cells[neighbor[DOWN]].type == SOLID)
+                        divergence -= scale * v;
+                    if(m_Grid.m_cells[neighbor[UP]].type == SOLID)
+                        divergence += scale * vUp;
+
+                    if(m_Grid.m_cells[neighbor[BACKWARD]].type == SOLID)
+                        divergence -= scale * w;
+                    if(m_Grid.m_cells[neighbor[FORWARD]].type == SOLID)
+                        divergence += scale * wForward;
+
                     b[idx] = divergence;
                 }
             }
@@ -260,44 +274,111 @@ void FlipSim::calculatePressure(real _dt)
         {
             for(uint i = 0; i < m_gridLength; i++)
             {
-                uint idx = utils::getIndex(m_gridLength, uvec3(i,j,k));
-                std::vector<Cell> neighbors = m_Grid.getNeighbors(m_Grid.getCell(i, j, k));
+                uint idx = fluidIDXs[utils::getIndex(m_gridLength, uvec3(i,j,k))];
+                int * neighbors = m_Grid.getNeighbors(m_Grid.getCell(i, j, k));
 
-                real P = p(idx);
-                real leftP = p(neighbors[LEFT].getIDX(m_gridLength));
-                real downP = p(neighbors[DOWN].getIDX(m_gridLength));
-                real backwardP = p(neighbors[BACKWARD].getIDX(m_gridLength));
+                if(idx < p.rows())
+                {
+                    real P = p(idx);
+
+                    real leftP = 0.0f;
+                    uint leftIDX = m_Grid.m_cells[neighbors[LEFT]].getIDX(m_gridLength);
+                    if(leftIDX < n_fluidCells)
+                        leftP = p(leftIDX);
+
+                    real downP = 0.0;
+                    uint downIDX = m_Grid.m_cells[neighbors[DOWN]].getIDX(m_gridLength);
+                    if(downIDX < n_fluidCells)
+                        downP = p(downIDX);
+
+                    real backwardP = 0.0;
+                    uint backwardIDX = m_Grid.m_cells[neighbors[BACKWARD]].getIDX(m_gridLength);
+                    if(backwardIDX < n_fluidCells)
+                        backwardP = p(backwardIDX);
 
 
-                //vel_x - dt / density * pressure_diff_x / mac_grid.deltaX();
-                real pressureDiffX = P-leftP;
-                real pressureDiffY = P-downP;
-                real pressureDiffZ = P-backwardP;
+                    //vel_x - dt / density * pressure_diff_x / mac_grid.deltaX();
+                    real pressureDiffX = P-leftP;
+                    real pressureDiffY = P-downP;
+                    real pressureDiffZ = P-backwardP;
 
-                real newU = _dt / m_density * pressureDiffX / m_Grid.m_h;
-                real newV = _dt / m_density * pressureDiffY / m_Grid.m_h;
-                real newW = _dt / m_density * pressureDiffZ / m_Grid.m_h;
+                    real newU = _dt / m_density * pressureDiffX / m_Grid.m_h;
+                    real newV = _dt / m_density * pressureDiffY / m_Grid.m_h;
+                    real newW = _dt / m_density * pressureDiffZ / m_Grid.m_h;
 
-                m_Grid.getCell(i,j,k).increaseVel(-vec3(newU, newV, newW));
+                    m_Grid.getCell(i,j,k).increaseVel(-vec3(newU, newV, newW));
+                }
             }
         }
     }
 }
 
+vec3 FlipSim::getSampledVelocity(const vec3 &_p)
+{
+    vec3 p = _p;
+    real * Us = (real *) malloc(8*sizeof(real));
+    real * Vs = (real *) malloc(8*sizeof(real));
+    real * Ws = (real *) malloc(8*sizeof(real));
+    for(int k = 0; k <2; k++)
+    {
+        for(int j = 0; j <2; j++)
+        {
+            for(int i = 0; i <2; i++)
+            {
+                p.x += (i+i-1) * m_Grid.m_h;
+                p.y += (j+j-1) * m_Grid.m_h;
+                p.z += (k+k-1) * m_Grid.m_h;
+
+                int x = std::floor(p.x);
+                x = std::max(x, 0);
+                x = std::min(x, (int)m_gridLength-1);
+                int y = std::floor(p.y);
+                y = std::max(y, 0);
+                y = std::min(y, (int)m_gridLength-1);
+                int z = std::floor(p.z);
+                z = std::max(z, 0);
+                z = std::min(z, (int)m_gridLength-1);
+
+                uint idx = utils::getIndex(m_gridLength, uvec3(x,y,z));
+
+                vec3 tmpVel = m_Grid.m_cells[idx].getDeltaVel();
+
+                real tmpU = tmpVel.x;
+                real tmpV = tmpVel.y;
+                real tmpW = tmpVel.z;
+
+                Us[i+(j*2)+(k*2*2)] = tmpU;
+                Vs[i+(j*2)+(k*2*2)] = tmpV;
+                Ws[i+(j*2)+(k*2*2)] = tmpW;
+            }
+        }
+    }
+    real newU = utils::trilerp(Us, p.x, p.y, p.z);
+    real newV = utils::trilerp(Vs, p.x, p.y, p.z);
+    real newW = utils::trilerp(Ws, p.x, p.y, p.z);
+
+    free(Us);
+    free(Vs);
+    free(Ws);
+
+    return vec3(newU, newV, newW);
+}
+
 void FlipSim::updateParticles()
 {
-    for(Cell c : m_Grid.m_cells)
+    for(auto&& c : m_Grid.m_cells)
     {
         for(uint idx : c.m_paticleIDXs)
         {
-            m_Grid.m_particles[idx].updateVel(c.getDeltaVel());
+            vec3 sampledVel = getSampledVelocity(m_Grid.m_particles[idx].pos);
+            m_Grid.m_particles[idx].updateVel(sampledVel);
         }
     }
 }
 
 void FlipSim::advectVelocityField(real _dt)
 {
-    for(Particle p : m_Grid.m_particles)
+    for(auto&& p : m_Grid.m_particles)
         p.advect(_dt);
 }
 

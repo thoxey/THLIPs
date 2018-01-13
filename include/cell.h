@@ -38,7 +38,7 @@ public:
 
     cellType type;
 
-    const ivec3 gridPos;
+    ivec3 gridPos;
 
     std::vector<uint> m_paticleIDXs;
 
@@ -46,7 +46,8 @@ public:
 
     vec3 getDeltaVel();
 
-    uint fluidIDX;
+    vec3 getVelField() const;
+
 private:
 
     real p;
