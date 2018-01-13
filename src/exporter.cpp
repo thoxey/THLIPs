@@ -2,10 +2,10 @@
 namespace exporter
 {
 /// This function was originally written by Jon Macey
-void exportToHoudini(uint _frameNumber, std::vector<MG_Particle> _particles)
+void exportToHoudini(uint _frameNumber, std::vector<Particle> _particles)
 {
         char fname[50];
-        std::sprintf(fname,"geo/THLIPSparticle.%03d.geo",_frameNumber++);
+        std::sprintf(fname,"geo/THLIPSparticle.%03d.geo",++_frameNumber);
         // we will use a stringstream as it may be more efficient
         std::stringstream ss;
         std::ofstream file;
@@ -53,7 +53,7 @@ void exportToHoudini(uint _frameNumber, std::vector<MG_Particle> _particles)
 }
 /// end of function
 
-void exportToOBJ(uint _frameNumber, std::vector<MG_Particle> _particles)
+void exportToOBJ(uint _frameNumber, std::vector<Particle> _particles)
 {
         char fname[50];
         std::sprintf(fname,"geo/THLIPSparticle.%03d.obj",_frameNumber++);
@@ -66,7 +66,7 @@ void exportToOBJ(uint _frameNumber, std::vector<MG_Particle> _particles)
             std::cerr << "failed to Open file "<<fname<<'\n';
             exit(EXIT_FAILURE);
         }
-        for(MG_Particle p : _particles)
+        for(Particle p : _particles)
         ss<<"v" <<" "<< p.pos.x <<" "<< p.pos.y <<" "<< p.pos.z<<"\n";
         // dump string stream to disk;
         file<<ss.rdbuf();

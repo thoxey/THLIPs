@@ -1,10 +1,10 @@
 #include "utils.h"
 
-namespace utility
+namespace utils
 {
-uint getIndex(uint _length, MG_Cell _c)
+uint getIndex(uint _length, uvec3 _pos)
 {
-    return _c.gridPos.x+(_length*_c.gridPos.y)+(_length*_length*_c.gridPos.z);
+    return (_length*_length*_pos.x)+(_length*_pos.y)+_pos.z;
 }
 
 real lerp(real _a, real _b, real _x)
@@ -75,4 +75,24 @@ void printvec(vec3 _x)
 {
     std::cout<<"X:"<<_x.x<<" Y: "<<_x.y<<" Z: "<<_x.z<<"\n";
 }
+
+real trilinearHatKernel(vec3 _dist, real _dx)
+{
+    return hatFunction(_dist.x / _dx) * hatFunction(_dist.y / _dx) * hatFunction(_dist.z / _dx);
+}
+
+real hatFunction(real _r) {
+    real rAbs = std::abs(_r);
+    if (rAbs <= 1) {
+        return 1.0 - rAbs;
+    } else {
+        return 0.0;
+    }
+}
+
+real divergentVelocity(real _v1, real _v2, real _dx)
+{
+    return (_v1-_v2)/_dx;
+}
+
 }

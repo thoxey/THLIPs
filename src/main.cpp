@@ -16,7 +16,7 @@ int main()
 {
     std::cout<<"Starting THLIPs... \n";
 
-    FlipSim flipSim = FlipSim(uvec3(10, 10, 10), 0.1, uvec3(0, 0, 5), uvec3(10,10,10));
+    FlipSim flipSim = FlipSim(10, 1.0, uvec3(0, 0, 0), uvec3(5,5,5));
 
 //    std::vector<MG_Particle> test;
 //    for(uint i = 0; i < 500; i++)
@@ -29,9 +29,9 @@ int main()
 //        test.push_back(p);
 //    }
 
-    for(uint i = 0; i < 100; i++)
+    for(uint i = 0; i < 20; i++)
     {
-        flipSim.step(i);
+        flipSim.step(0.0025);
         exporter::exportToHoudini(i, flipSim.getParticles());
 //        for(uint i = 0; i < test.size(); i++)
 //        {

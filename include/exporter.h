@@ -11,11 +11,11 @@ namespace exporter
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Export particles to Houdini Geo format, code from ///https://github.com/NCCA/SimulationExports/blob/master/HoudiniGeo/src/Emitter.cpp
     //----------------------------------------------------------------------------------------------------------------------
-    void exportToHoudini(uint _frameNumber, std::vector<MG_Particle> _particles);
+    void exportToHoudini(uint _frameNumber, std::vector<Particle> _particles);
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Export particles to OBJ format
     //----------------------------------------------------------------------------------------------------------------------
-    void exportToOBJ(uint _frameNumber, std::vector<MG_Particle> _particles);
+    void exportToOBJ(uint _frameNumber, std::vector<Particle> _particles);
 
 };
 #endif

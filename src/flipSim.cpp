@@ -1,138 +1,110 @@
 #include "flipSim.h"
 
-FlipSim::FlipSim(uvec3 _size, real _cellWidth, uvec3 _b, uvec3 _c):m_MACGrid(_size, _cellWidth)
+FlipSim::FlipSim(uint _size, real _cellWidth, uvec3 _b, uvec3 _c):
+    m_Grid(_size, _cellWidth),
+    m_gridLength(_size)
 {
-    m_dx = _cellWidth;
-
-    m_iSize = _size.x;
-    m_jSize = _size.y;
-    m_kSize = _size.z;
-
-    m_MACGrid.initialiseCells(_b, _c);
+    m_Grid.initialiseCells(_b, _c);
 }
 
 void FlipSim::step(real _dt)
 {
-    /*
-    Basic algorithm from Bridson's Course Notes:
-    (U is a velocity field)
-    >for timeStep n = 0,1,2...
-        >Determine Time Step dt to go from tn to tn+1
-
-        Advect quantity q, through vector field Un for time interval dt
-        >set Ua = advect(Un, dt, q)
-
-        Add body forces
-        >Ub = Ua +dtg
-
-        To handle pressure/incompressibility we make a function called project
-        >Un+1 = project(dt, Ub)
-    */
-
-    real t = 0;
-
-    while(t < _dt)
-    {
-        //Calculate our substep
-        real subStep = cfl();
-
-        updateGrid();
-
-        //Add gravity and stuff
-        //Per particle calculation
-        addBodyForce(subStep);
-
-        //Per cell
-        project(subStep);
-
-        updateParticles();
-
-        //Per particle
-        //advect the velocity field
-        advectVelocityField(_dt);
-
-        for(uint i = 0; i < m_MACGrid.m_cells.size(); i++)
-        {
-            MG_Cell c = m_MACGrid.getCell(m_MACGrid.m_cells[i]);
-            //utility::printvec(c.oldVelField);
-            c.oldVelField = c.velField;
-            m_MACGrid.insertCellInHashTable(c);
-            //utility::printvec(c.oldVelField);
-        }
-
-        t += subStep;
-    }
+    real subStep = cfl();
+    m_Grid.reclassifyCells();
+    updateGrid();
+    addBodyForce(subStep);
+    project(_dt);
+    updateParticles();
+    advectVelocityField(_dt);
 }
 
 
 real FlipSim::cfl()
 {
-    real umax = m_MACGrid.getMaxSpeed() + (std::sqrt(5*m_dx*(-1*m_g.y)));
-
-    real ret = (5*m_dx)/std::max(umax, 0.000001);
-    return ret * m_k_cfl;
+    return 1.0;
 }
 
-void FlipSim::addBodyForce(real _dt)
+void FlipSim::updateGrid()
 {
-    for(uint k = 0; k < m_kSize; k++)
+
+
+    std::vector<real> uNum;
+    uNum.reserve(m_gridLength*m_gridLength*m_gridLength);
+    std::vector<real> uDen;
+    uDen.reserve(m_gridLength*m_gridLength*m_gridLength);
+    std::vector<real> vNum;
+    vNum.reserve(m_gridLength*m_gridLength*m_gridLength);
+    std::vector<real> vDen;
+    vDen.reserve(m_gridLength*m_gridLength*m_gridLength);
+    std::vector<real> wNum;
+    wNum.reserve(m_gridLength*m_gridLength*m_gridLength);
+    std::vector<real> wDen;
+    wDen.reserve(m_gridLength*m_gridLength*m_gridLength);
+
+    for(uint k = 0; k < m_gridLength; k++)
     {
-        for(uint j = 0; j < m_jSize; j++)
+        for(uint j = 0; j < m_gridLength; j++)
         {
-            for(uint i = 0; i < m_iSize; i++)
+            for(uint i = 0; i < m_gridLength; i++)
             {
-                //utility::printvec(m_MACGrid.getCell(i,j,k).velField);
-                MG_Cell c = m_MACGrid.getCell(i,j,k);
-                c.velField += _dt * m_g;
-                m_MACGrid.insertCellInHashTable(c);
-                //utility::printvec(m_MACGrid.getCell(i,j,k).velField);
+                uNum[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
+                uDen[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
+                vNum[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
+                vDen[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
+                wNum[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
+                wDen[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
+            }
+        }
+    }
+
+    for(Particle p : m_Grid.m_particles)
+    {
+        for(uint k = 0; k < m_gridLength; k++)
+        {
+            for(uint j = 0; j < m_gridLength; j++)
+            {
+                for(uint i = 0; i < m_gridLength; i++)
+                {
+                    vec3 cellPos = m_Grid.getCellPos(m_Grid.getCell(i,j,k));
+                    real kernel = utils::trilinearHatKernel(p.pos - cellPos - vec3(0.5,0,0), m_Grid.m_h);
+
+                    uNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = p.vel.x * kernel;
+                    uDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = kernel;
+
+                    vNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = p.vel.y * kernel;
+                    vDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = kernel;
+
+                    wNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = p.vel.z * kernel;
+                    wDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = kernel;
+                }
+            }
+        }
+    }
+
+    for(uint k = 0; k < m_gridLength; k++)
+    {
+        for(uint j = 0; j < m_gridLength; j++)
+        {
+            for(uint i = 0; i < m_gridLength; i++)
+            {
+                real newU = uNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] / uDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))];
+                real newV = vNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] / vDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))];
+                real newW = wNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] / wDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))];
+                m_Grid.getCell(i,j,k).updateVel(vec3(newU, newV, newW));
             }
         }
     }
 }
 
-void FlipSim::updateGrid()
+void FlipSim::addBodyForce(real _dt)
 {
-    for(uint k = 0; k < m_kSize; k++)
+    for(uint k = 0; k < m_gridLength; k++)
     {
-        for(uint j = 0; j < m_jSize; j++)
+        for(uint j = 0; j < m_gridLength; j++)
         {
-            for(uint i = 0; i < m_iSize; i++)
+            for(uint i = 0; i < m_gridLength; i++)
             {
-                MG_Cell c;
-                if(m_MACGrid.checkForCell(i, j, k, c))
-                {
-                    //utility::printvec(c.velField);
-                    std::vector<MG_Cell> neighbors = m_MACGrid.getNeighbors(c);
-                    std::vector<MG_Particle> tmpP;
-                    vec3 vel;
-                    for(MG_Particle p : m_MACGrid.m_particles)
-                    {
-                        if(c.key == p.cellidx)
-                            tmpP.push_back(p);
-                    }
-                    if(tmpP.size() == 0 && c.type != SOLID)
-                    {
-                        c.type = AIR;
-                    }
-                    else if(!tmpP.size() == 0)
-                    {
-                        c.type = FLUID;
-
-                        for(MG_Particle p : tmpP)
-                        {
-                            vec3 cellpos = m_MACGrid.getCellPos(c);
-                            real newU = utility::lerp(neighbors[LEFT].u(), c.u(), p.pos.x-cellpos.x);
-                            real newV = utility::lerp(neighbors[DOWN].v(), c.v(), p.pos.y-cellpos.y);
-                            real newW = utility::lerp(neighbors[BACKWARD].w(), c.w(), p.pos.z-cellpos.z);
-                            vel += vec3(newU, newV, newW);
-                        }
-                        vel /= tmpP.size();
-                        c.velField = vel;
-                        m_MACGrid.insertCellInHashTable(c);
-                    }
-                    //utility::printvec(c.velField);
-                }
+                m_Grid.getCell(i,j,k).updateVel(m_g * _dt);
             }
         }
     }
@@ -140,242 +112,173 @@ void FlipSim::updateGrid()
 
 void FlipSim::project(real _dt)
 {
-    calculateNegativeDivergence();
+    enforceDirichlet();
     calculatePressure(_dt);
-    applyPressure(_dt);
+    enforceDirichlet();
 }
 
-void FlipSim::calculateNegativeDivergence()
+void FlipSim::enforceDirichlet()
 {
-    real scale = -1/m_dx;
-    for(uint k = 0; k < m_kSize; k++)
+    for(uint k = 0; k < m_gridLength; k++)
     {
-        for(uint j = 0; j < m_jSize; j++)
+        for(uint j = 0; j < m_gridLength; j++)
         {
-            for(uint i = 0; i < m_iSize; i++)
+            for(uint i = 0; i < m_gridLength; i++)
             {
-                MG_Cell c;
-                if(m_MACGrid.checkForCell(i, j, k, c))
-                    if(c.type == FLUID)
-                    {
-                        real uip1 = 0.0;
-                        real vjp1 = 0.0;
-                        real wkp1 = 0.0;
-                        std::vector<MG_Cell> neighbors = m_MACGrid.getNeighbors(c);
+                Cell c = m_Grid.getCell(i,j,k);
+                std::vector<Cell> neighbors = m_Grid.getNeighbors(c);
+                //If we are neighboring/are a SOLID dont add velocity into the solid
 
-                        if(neighbors[RIGHT].type == FLUID)
-                            uip1 = neighbors[RIGHT].u();
-                        if(neighbors[UP].type == FLUID)
-                            vjp1 = neighbors[UP].w();
-                        if(neighbors[FORWARD].type == FLUID)
-                            wkp1 = neighbors[FORWARD].v();
-
-                        c.rhs = scale * (uip1 - c.u() + vjp1 - c.w() + wkp1 - c.v());
-
-                        //figure 5.4 Bridon's book
-                        if(neighbors[LEFT].type == SOLID)
-                            c.rhs -= scale * c.u();
-                        if(neighbors[RIGHT].type == SOLID)
-                            c.rhs += scale * neighbors[RIGHT].u();
-
-                        if(neighbors[DOWN].type == SOLID)
-                            c.rhs -= scale * neighbors[DOWN].v();
-                        if(neighbors[UP].type == SOLID)
-                            c.rhs += scale * neighbors[UP].v();
-
-                        if(neighbors[BACKWARD].type == SOLID)
-                            c.rhs -= scale * neighbors[BACKWARD].w();
-                        if(neighbors[FORWARD].type == SOLID)
-                            c.rhs += scale * neighbors[FORWARD].w();
-                    }
+                // X velocity
+                if((c.type  == SOLID && c.U() > 0) || (neighbors[LEFT].type == SOLID && c.U() < 0))
+                {
+                    c.setU(0.0);
+                }
+                // Y velocity
+                if((c.type  == SOLID && c.V() > 0) || (neighbors[DOWN].type == SOLID && c.V() < 0))
+                {
+                    c.setV(0.0);
+                }
+                // Z velocity
+                if((c.type  == SOLID && c.W() > 0) || (neighbors[BACKWARD].type == SOLID && c.W() < 0))
+                {
+                    c.setW(0.0);
+                }
             }
         }
     }
-
 }
 
 void FlipSim::calculatePressure(real _dt)
 {
-    real scale = _dt / (m_density * m_dx * m_dx);
-    //Sum up the fluid cells
     uint n_fluidCells = 0;
-    std::vector<int> fluidCellKeys;
-    uint fluidIDX = 0;
-    for(uint c : m_MACGrid.m_cells)
-        if(m_MACGrid.getCell(c).type == FLUID)
+    std::vector<int> fluidIDXs;
+    for(Cell c : m_Grid.m_cells)
+    {
+        if(c.type == FLUID)
         {
-            n_fluidCells++;
-            fluidCellKeys.push_back(c);
-//            MG_Cell tmp = m_MACGrid.getCell(c);
-//            tmp.fluidIDX = fluidIDX++;
-//            m_MACGrid.insertCellInHashTable(tmp);
-            m_MACGrid.getCell(c).updateFluidIDX(fluidIDX++);
+            c.fluidIDX = n_fluidCells;
+            fluidIDXs.push_back(n_fluidCells++);
         }
+        else
+        {
+            fluidIDXs.push_back(-1);
+        }
+    }
 
-    //Coeff Matrix
+    //Laplacian Matrix
     Eigen::SparseMatrix<real> A(n_fluidCells, n_fluidCells);
-    A.reserve(Eigen::VectorXi::Constant(n_fluidCells, 7));
+    A.reserve(Eigen::VectorXi::Constant(n_fluidCells, 5));
 
-    //Fill with rhs values
     //Divergence
     VectorX b(n_fluidCells);
-    for(uint i = 0; i < n_fluidCells; i++)
-        b[i] = m_MACGrid.getCell(fluidCellKeys[i]).rhs;
 
-    //Bridsons book figure 5.5
-    for(uint k = 0; k < m_kSize; k++)
+    real scale = 1/(_dt*_dt);
+
+    for(uint k = 0; k < m_gridLength; k++)
     {
-        for(uint j = 0; j < m_jSize; j++)
+        for(uint j = 0; j < m_gridLength; j++)
         {
-            for(uint i = 0; i < m_iSize; i++)
+            for(uint i = 0; i < m_gridLength; i++)
             {
-                MG_Cell c;
-                uint aDiagIdx, aXidx, aYidx, aZidx;
-                std::vector<MG_Cell> neighbors;
-                if(m_MACGrid.checkForCell(i,j,k,c))
+                if(fluidIDXs[utils::getIndex(m_gridLength, uvec3(i,j,k))] != -1)
                 {
-                    aDiagIdx = c.fluidIDX;
-                    neighbors = m_MACGrid.getNeighbors(c);
-                }
-                else
-                    continue;
+                    uint idx = m_Grid.getCell(i,j,k).fluidIDX;
+                    uint n_NonSolidNeighbors = 0;
+                    std::vector<Cell> neighbors = m_Grid.getNeighbors(m_Grid.getCell(i, j, k));
 
-                aXidx = neighbors[RIGHT].fluidIDX;
-
-                aYidx = neighbors[UP].fluidIDX;
-
-                aZidx = neighbors[FORWARD].fluidIDX;
-
-                if(c.type == FLUID)
-                {
-                    if(neighbors[LEFT].type == FLUID)
+                    if(neighbors[LEFT].type != SOLID)
                     {
-                        A.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                        if(neighbors[LEFT].type == FLUID)
+                        {
+                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[LEFT].gridPos)], idx) = scale;
+                        }
+                        n_NonSolidNeighbors++;
                     }
-                    if(neighbors[RIGHT].type == FLUID)
+                    if(neighbors[RIGHT].type != SOLID)
                     {
-                        A.coeffRef(aDiagIdx, aDiagIdx) += scale;
-                        A.coeffRef(aDiagIdx, aXidx) -= scale;
-                    }
-                    else if(neighbors[RIGHT].type == AIR)
-                    {
-                        A.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                        if(neighbors[RIGHT].type == FLUID)
+                        {
+                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[RIGHT].gridPos)], idx) = scale;
+                        }
+                        n_NonSolidNeighbors++;
                     }
 
-                    if(neighbors[DOWN].type == FLUID)
+                    if(neighbors[DOWN].type != SOLID)
                     {
-                        A.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                        if(neighbors[DOWN].type == FLUID)
+                        {
+                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[DOWN].gridPos)], idx) = scale;
+                        }
+                        n_NonSolidNeighbors++;
                     }
-                    if(neighbors[UP].type == FLUID)
+                    if(neighbors[UP].type != SOLID)
                     {
-                        A.coeffRef(aDiagIdx, aDiagIdx) += scale;
-                        A.coeffRef(aDiagIdx, aYidx) -= scale;
-                    }
-                    else if(neighbors[UP].type == AIR)
-                    {
-                        A.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                        if(neighbors[UP].type == FLUID)
+                        {
+                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[UP].gridPos)], idx) = scale;
+                        }
+                        n_NonSolidNeighbors++;
                     }
 
-                    if(neighbors[BACKWARD].type == FLUID)
+                    if(neighbors[BACKWARD].type != SOLID)
                     {
-                        A.coeffRef(aDiagIdx, aDiagIdx) += scale;
+                        if(neighbors[BACKWARD].type == FLUID)
+                        {
+                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[BACKWARD].gridPos)], idx) = scale;
+                        }
+                        n_NonSolidNeighbors++;
                     }
-                    if(neighbors[FORWARD].type == FLUID)
+                    if(neighbors[FORWARD].type != SOLID)
                     {
-                        A.coeffRef(aDiagIdx, aDiagIdx) += scale;
-                        A.coeffRef(aDiagIdx, aZidx) -= scale;
+                        if(neighbors[FORWARD].type == FLUID)
+                        {
+                            A.insert(fluidIDXs[utils::getIndex(m_Grid.m_h, neighbors[FORWARD].gridPos)], idx) = scale;
+                        }
+                        n_NonSolidNeighbors++;
                     }
-                    else if(neighbors[FORWARD].type == AIR)
-                    {
-                        A.coeffRef(aDiagIdx, aDiagIdx) += scale;
-                    }
+
+                    A.insert(idx, idx) = -n_NonSolidNeighbors*scale;
+                    real divergence = utils::divergentVelocity(neighbors[RIGHT].U(), m_Grid.getCell(i,j,k).U(), m_Grid.m_h);
+                    divergence += utils::divergentVelocity(neighbors[UP].V(), m_Grid.getCell(i,j,k).V(), m_Grid.m_h);
+                    divergence += utils::divergentVelocity(neighbors[FORWARD].W(), m_Grid.getCell(i,j,k).W(), m_Grid.m_h);
+                    b[idx] = divergence;
                 }
             }
         }
     }
 
-    //A sparse solver: time and/or sanity saver
     Eigen::SimplicialLLT<Eigen::SparseMatrix<real>> solver;
     //To store the result in
     VectorX p(n_fluidCells);
     solver.compute(A);
     p = solver.solve(b);
 
-    for(uint i = 0; i < n_fluidCells; i++)
+    for(uint k = 0; k < m_gridLength; k++)
     {
-        MG_Cell c = m_MACGrid.getCell(fluidCellKeys[i]);
-        //std::cout<<c.p<<"\n";
-        c.p = p[i];
-        m_MACGrid.insertCellInHashTable(c);
-        //std::cout<<c.p<<"\n";
-    }
-}
-
-
-void FlipSim::applyPressure(real _dt)
-{
-    //fig 5.2
-    real scale = _dt / (m_density*m_dx);
-
-    for(uint k = 0; k < m_kSize; k++)
-    {
-        for(uint j = 0; j < m_jSize; j++)
+        for(uint j = 0; j < m_gridLength; j++)
         {
-            for(uint i = 0; i < m_iSize; i++)
+            for(uint i = 0; i < m_gridLength; i++)
             {
-                real u = 0.0;
-                real v = 0.0;
-                real w = 0.0;
+                uint idx = utils::getIndex(m_gridLength, uvec3(i,j,k));
+                std::vector<Cell> neighbors = m_Grid.getNeighbors(m_Grid.getCell(i, j, k));
 
-                MG_Cell c;
-                std::vector<MG_Cell> neighbors;
-                if(m_MACGrid.checkForCell(i,j,k,c))
-                {
-                    neighbors = m_MACGrid.getNeighbors(c);
-                    //Update u
-                    if(neighbors[LEFT].type == FLUID || c.type == FLUID)
-                    {
-                        if(!(neighbors[LEFT].type == SOLID || c.type == SOLID))
-                        {
-                            u -= scale * (c.p - neighbors[LEFT].p);
-                        }
-                    }
-                    else
-                    {
-                        //mark u(i,j,k) as unknown
-                    }
+                real P = p(idx);
+                real leftP = p(neighbors[LEFT].getIDX(m_gridLength));
+                real downP = p(neighbors[DOWN].getIDX(m_gridLength));
+                real backwardP = p(neighbors[BACKWARD].getIDX(m_gridLength));
 
-                    //update v
-                    if(neighbors[DOWN].type == FLUID || c.type == FLUID)
-                    {
-                        if(!(neighbors[DOWN].type == SOLID || c.type == SOLID))
-                        {
-                            v -= scale * (c.p - neighbors[DOWN].p);
-                        }
-                    }
-                    else
-                    {
-                        //mark v(i,j,k) as unknown
-                    }
-                    //update w
-                    if(neighbors[BACKWARD].type == FLUID || c.type == FLUID)
-                    {
-                        if(!(neighbors[BACKWARD].type == SOLID || c.type == SOLID))
-                        {
-                            w -= scale * (c.p - neighbors[BACKWARD].p);
-                        }
-                    }
-                    else
-                    {
-                        //mark w(i,j,k) as unknown
-                    }
-                    //utility::printvec(c.velField);
-                    c.velField = vec3(u,v,w);
-                    m_MACGrid.insertCellInHashTable(c);
-                    if(c.type == FLUID)
-                        real t = c.p;
-                    //utility::printvec(c.velField);
-                }
+
+                //vel_x - dt / density * pressure_diff_x / mac_grid.deltaX();
+                real pressureDiffX = P-leftP;
+                real pressureDiffY = P-downP;
+                real pressureDiffZ = P-backwardP;
+
+                real newU = _dt / m_density * pressureDiffX / m_Grid.m_h;
+                real newV = _dt / m_density * pressureDiffY / m_Grid.m_h;
+                real newW = _dt / m_density * pressureDiffZ / m_Grid.m_h;
+
+                m_Grid.getCell(i,j,k).increaseVel(-vec3(newU, newV, newW));
             }
         }
     }
@@ -383,32 +286,22 @@ void FlipSim::applyPressure(real _dt)
 
 void FlipSim::updateParticles()
 {
-    std::vector<MG_Particle> newP;
-    for(MG_Particle p : m_MACGrid.m_particles)
+    for(Cell c : m_Grid.m_cells)
     {
-        p.vel = m_MACGrid.getCell(p.cellidx).oldVelField - m_MACGrid.getCell(p.cellidx).velField;
-        newP.push_back(p);
-//        utility::printvec(m_MACGrid.getCell(p.cellidx).velField);
+        for(uint idx : c.m_paticleIDXs)
+        {
+            m_Grid.m_particles[idx].updateVel(c.getDeltaVel());
+        }
     }
-    m_MACGrid.m_particles = newP;
-
 }
 
 void FlipSim::advectVelocityField(real _dt)
 {
-//    for(MG_Particle p : m_MACGrid.m_particles)
-//    {
-//        p.pos = m_MACGrid.tracePoint(p.pos, _dt);
-//    }
-    for(uint i = 0; i < m_MACGrid.m_particles.size(); i++)
-    {
-//        utility::printvec(m_MACGrid.m_particles[i].pos);
-        m_MACGrid.m_particles[i].pos = m_MACGrid.tracePoint(m_MACGrid.m_particles[i].pos, _dt);
-//        utility::printvec(m_MACGrid.m_particles[i].pos);
-    }
+    for(Particle p : m_Grid.m_particles)
+        p.advect(_dt);
 }
 
-std::vector<MG_Particle> FlipSim::getParticles()
+std::vector<Particle> FlipSim::getParticles()
 {
-    return m_MACGrid.m_particles;
+    return m_Grid.m_particles;
 }

@@ -7,9 +7,11 @@
 #include<cmath>
 #include<random>
 #include<iostream>
+#include <algorithm>
 
 #include<glm/vec3.hpp>
 
+#include<eigen3/Eigen/Dense>
 #include<eigen3/Eigen/Sparse>
 #include<eigen3/Eigen/SparseCholesky>
 
@@ -21,93 +23,41 @@
 /// @date 19/01/17 Initial version
 //----------------------------------------------------------------------------------------------------------------------
 
+
+//----------------------------------------------------------------------------------------------------------------------
+/// TYPEDEFS TO ALLOW FOR EASILY SWAPPING BETWEEN VECTOR IMPLEMENTATIONS
 #define USE_DOUBLE_PRECISION
 //-fsingle-precision-constant
 #ifdef USE_DOUBLE_PRECISION
 typedef double real;
 typedef Eigen::VectorXd VectorX;
 typedef glm::dvec3 vec3;
+typedef Eigen::MatrixXd mat;
 #else
 typedef float real;
 typedef Eigen::VectorXf VectorX;
 typedef glm::vec3 vec3;
+typedef Eigen::MatrixXf mat;
 #endif
+//----------------------------------------------------------------------------------------------------------------------
 
 typedef glm::uvec3 uvec3;
+typedef glm::ivec3 ivec3;
 typedef unsigned int uint;
 
 enum cellType {FLUID, AIR, SOLID};
 
 enum neighbors {RIGHT, LEFT, UP, DOWN, FORWARD, BACKWARD};
 
-struct MG_Cell
-{
-    uvec3 gridPos;
-
-    //Vel field should be half a cell offset from the pressure
-    vec3 velField, oldVelField;
-
-    //Pressure
-    real p;
-
-    cellType type;
-
-    uint key;
-    //Fig 5.3 Bridsons book
-    real rhs;
-
-    uint fluidIDX;
-
-    MG_Cell(uvec3 _pos)
-    {
-        gridPos = _pos;
-        key = 541*_pos.x+79*_pos.y+31*_pos.z;
-
-        velField = vec3(0.0,0.0,0.0);
-        oldVelField = velField;
-        p = 0;
-    }
-    MG_Cell()
-    {
-        type = SOLID;
-
-        velField = vec3(0.0,0.0,0.0);
-        oldVelField = velField;
-
-        p = 0;
-    }
-    real u()
-    {
-        return velField.x;
-    }
-    real w()
-    {
-        return velField.y;
-    }
-    real v()
-    {
-        return velField.z;
-    }
-
-    void updateVel(vec3 _newVel)
-    {
-        velField = _newVel;
-    }
-    void updateFluidIDX(uint _newIDX)
-    {
-        fluidIDX = _newIDX;
-    }
-};
-
-struct MG_Particle
+struct Particle
 {
     vec3 pos;
 
     vec3 vel;
 
-    uint cellidx;
+    uint idx;
 
-    MG_Particle()
+    Particle()
     {
         pos = vec3(0,0,0);
         vel = vec3(0,0,0);
@@ -117,7 +67,16 @@ struct MG_Particle
     {
         pos = _newPos;
     }
-
+    void updateVel(vec3 _newVel)
+    {
+        vel += _newVel;
+    }
+    void advect(real _dt)
+    {
+        pos.x += vel.x * _dt;
+        pos.y += vel.y * _dt;
+        pos.z += vel.y * _dt;
+    }
 };
 
 const vec3 rightVec = vec3(1.0,0.0,0.0);
@@ -134,9 +93,9 @@ const uvec3 udownVec = uvec3(0,-1,0);
 const uvec3 uforwardVec = uvec3(0,0,1);
 const uvec3 ubackwardVec = uvec3(0,0,1);
 
-namespace utility
+namespace utils
 {
-uint getIndex(uint _length, MG_Cell _c);
+uint getIndex(uint _length, uvec3 _pos);
 
 real randRange(real _max);
 
@@ -154,6 +113,11 @@ void printvec(uvec3 _x);
 
 void printvec(vec3 _x);
 
+real trilinearHatKernel(vec3 _dist, real _dx);
+
+real hatFunction(real _r);
+
+real divergentVelocity(real _v1, real _v2, real _dx);
 }
 
 

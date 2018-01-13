@@ -1,67 +1,63 @@
 #include "MACGrid.h"
 
-MACGrid::MACGrid(uvec3 _size, real _cellWidth)
-{
-    m_i_length = _size.x;
-    m_j_length = _size.y;
-    m_k_length = _size.y;
+MACGrid::MACGrid(uint _size, real _cellWidth):
+    m_gridLength(_size),
+    m_h(_cellWidth)
+{}
 
-    h = _cellWidth;
-}
-
-vec3 MACGrid::getJitteredPos(MG_Cell _c, uint _count)
+vec3 MACGrid::getJitteredPos(Cell _c, uint _count)
 {
-    real ho2 = h/2;
+    real ho2 = m_h/2;
     real x, y, z;
 
     enum corners {OOO, IOO, OIO, OOI, IOI, OII, IIO, III};
     switch (_count) {
     case OOO:
-        x = utility::randRange(ho2);
-        y = utility::randRange(ho2);
-        z = utility::randRange(ho2);
+        x = utils::randRange(ho2);
+        y = utils::randRange(ho2);
+        z = utils::randRange(ho2);
         return getCellPos(_c) + vec3(x, y, z);
         break;
     case IOO:
-        x = utility::randRange(ho2, ho2);
-        y = utility::randRange(ho2);
-        z = utility::randRange(ho2);
+        x = utils::randRange(ho2, m_h);
+        y = utils::randRange(ho2);
+        z = utils::randRange(ho2);
         return getCellPos(_c) + vec3(x, y, z);
         break;
     case OIO:
-        x = utility::randRange(ho2);
-        y = utility::randRange(ho2, ho2);
-        z = utility::randRange(ho2);
+        x = utils::randRange(ho2);
+        y = utils::randRange(ho2, m_h);
+        z = utils::randRange(ho2);
         return getCellPos(_c) + vec3(x, y, z);
         break;
     case OOI:
-        x = utility::randRange(ho2);
-        y = utility::randRange(ho2);
-        z = utility::randRange(ho2, ho2);
+        x = utils::randRange(ho2);
+        y = utils::randRange(ho2);
+        z = utils::randRange(ho2, m_h);
         return getCellPos(_c) + vec3(x, y, z);
         break;
     case IOI:
-        x = utility::randRange(ho2, ho2);
-        y = utility::randRange(ho2);
-        z = utility::randRange(ho2, ho2);
+        x = utils::randRange(ho2, m_h);
+        y = utils::randRange(ho2);
+        z = utils::randRange(ho2, m_h);
         return getCellPos(_c) + vec3(x, y, z);
         break;
     case OII:
-        x = utility::randRange(ho2);
-        y = utility::randRange(ho2, ho2);
-        z = utility::randRange(ho2, ho2);
+        x = utils::randRange(ho2);
+        y = utils::randRange(ho2, m_h);
+        z = utils::randRange(ho2, m_h);
         return getCellPos(_c) + vec3(x, y, z);
         break;
     case IIO:
-        x = utility::randRange(ho2, ho2);
-        y = utility::randRange(ho2, ho2);
-        z = utility::randRange(ho2);
+        x = utils::randRange(ho2, m_h);
+        y = utils::randRange(ho2, m_h);
+        z = utils::randRange(ho2);
         return getCellPos(_c) + vec3(x, y, z);
         break;
     case III:
-        x = utility::randRange(ho2, ho2);
-        y = utility::randRange(ho2, ho2);
-        z = utility::randRange(ho2, ho2);
+        x = utils::randRange(ho2, m_h);
+        y = utils::randRange(ho2, m_h);
+        z = utils::randRange(ho2, m_h);
         return getCellPos(_c) + vec3(x, y, z);
         break;
     default:
@@ -70,246 +66,116 @@ vec3 MACGrid::getJitteredPos(MG_Cell _c, uint _count)
     }
 }
 
-
-
-uint MACGrid::generateKey(uint _i, uint _j, uint _k)
+vec3 MACGrid::getCellPos(Cell _c)
 {
-    return 541*_i+79*_j+31*_k;
+    return vec3(_c.gridPos.x * m_h + 0.5 * m_h, _c.gridPos.y * m_h + 0.5 * m_h, _c.gridPos.z * m_h + 0.5 * m_h);
 }
 
-uint MACGrid::generateKey(uvec3 _pos)
+void MACGrid::reclassifyCells()
 {
-    return 541*_pos.x+79*_pos.y+31*_pos.z;
-}
-
-
-void MACGrid::initialiseCells(uvec3 _b, uvec3 _c)
-{
-    for(uint k = 0; k < m_k_length; k++)
+    for(Cell c : m_cells)
     {
-        for(uint j = 0; j < m_j_length; j++)
-        {
-            for(uint i = 0; i < m_i_length; i++)
-            {
-                MG_Cell c = MG_Cell(uvec3(i,j,k));
-                if(i == 0 || i == m_i_length-1 || j == 0 || j == m_j_length-1 || k == 0 || k == m_k_length-1)
-                    c.type = SOLID;
-                else if(utility::isInBounds(uvec3(i,j,k), _b, _c))
-                {
-                    initialiseCellWithFluid(c, uvec3(i,j,k));
-                }
-                else
-                    c.type = AIR;
+        //Solid cells wont change so skip
+        if(c.type == SOLID)
+            continue;
 
-                insertCellInHashTable(c);
-                m_cells.push_back(c.key);
+        //Set to AIR and clear particle indicies
+        c.m_paticleIDXs.clear();
+        c.type = AIR;
+
+        for(Particle p : m_particles)
+        {
+            if(utils::isInBounds(getCellPos(c)-vec3(m_h/2), getCellPos(c)+vec3(m_h/2), p.pos))
+            {
+                c.type = FLUID;
+                c.m_paticleIDXs.push_back(p.idx);
             }
         }
     }
 }
 
-void MACGrid::initialiseCellWithFluid(MG_Cell& _c, uvec3 _pos)
+void MACGrid::initialiseCells(uvec3 _b, uvec3 _c)
 {
-    _c.gridPos = _pos;
-    _c.key = generateKey(_pos);
-    _c.type = FLUID;
-    for(uint i = 0; i < 8; i++)
-    {
-        MG_Particle p;
-        p.cellidx = _c.key;
-        p.pos = getJitteredPos(_c, i);
-        m_particles.push_back(p);
-    }
+    for(uint k = 0; k < m_gridLength; k++)
+        {
+            for(uint j = 0; j < m_gridLength; j++)
+            {
+                for(uint i = 0; i < m_gridLength; i++)
+                {
+                    Cell c = Cell(uvec3(i,j,k));
+                    if(i == 0 || i == m_gridLength-1 || j == 0 || j == m_gridLength-1 || k == 0 || k == m_gridLength-1)
+                        c.type = SOLID;
+                    else if(utils::isInBounds(uvec3(i,j,k), _b, _c))
+                    {
+                        c.type = FLUID;
+                        for(uint i = 0; i < 8; i++)
+                        {
+                            Particle p;
+                            p.idx = m_particleCount++;
+                            p.pos = getJitteredPos(c, i);
+                            m_particles.push_back(p);
+                            c.m_paticleIDXs.push_back(p.idx);
+                        }
+                    }
+                    else
+                        c.type = AIR;
+
+                    m_cells.push_back(c);
+                }
+            }
+        }
 
 }
 
-std::vector<MG_Cell> MACGrid::getNeighbors(MG_Cell _c)
+void MACGrid::initialiseCellWithFluid(Cell _c)
 {
-    std::vector<MG_Cell> ret;
-    ret.reserve(6);
-    uvec3 centre = _c.gridPos;
-    MG_Cell tmp;
-    MG_Cell empty;
-    if(checkForCell(centre + uleftVec, tmp))
-        ret.push_back(tmp);
-    else
-        ret.push_back(empty);
-    if(checkForCell(centre + urightVec, tmp))
-        ret.push_back(tmp);
-    else
-        ret.push_back(empty);
-    if(checkForCell(centre + uupVec, tmp))
-        ret.push_back(tmp);
-    else
-        ret.push_back(empty);
-    if(checkForCell(centre + udownVec, tmp))
-        ret.push_back(tmp);
-    else
-        ret.push_back(empty);
-    if(checkForCell(centre + uforwardVec, tmp))
-        ret.push_back(tmp);
-    else
-        ret.push_back(empty);
-    if(checkForCell(centre + ubackwardVec, tmp))
-        ret.push_back(tmp);
-    else
-        ret.push_back(empty);
 
+
+}
+
+std::vector<Cell> MACGrid::getNeighbors(Cell _c)
+{
+    std::vector<Cell> ret;
+    uvec3 refPos = _c.gridPos;
+    ret.push_back(getCell(refPos + uleftVec));
+    ret.push_back(getCell(refPos + urightVec));
+    ret.push_back(getCell(refPos + uupVec));
+    ret.push_back(getCell(refPos + udownVec));
+    ret.push_back(getCell(refPos + uforwardVec));
+    ret.push_back(getCell(refPos + ubackwardVec));
     return ret;
 }
 
 real MACGrid::getMaxSpeed()
 {
-    real maxSpeed = 0.0;
-    for(MG_Particle p : m_particles)
-    {
-        maxSpeed = std::max(maxSpeed, p.vel.x);
-        maxSpeed = std::max(maxSpeed, p.vel.y);
-        maxSpeed = std::max(maxSpeed, p.vel.z);
-    }
-    return maxSpeed;
-}
-/*
-                // Trace a particle from point (x, y, z) for t time using RK2.
-                Point traceParticle(real x, real y, real z, real t)
-                    Vector V = getVelocity(x, y, z);
-                    V = getVelocity(x+0.5*t*V.x, y+0.5*t*V.y, z+0.5*t*V.z);
-                    return Point(x, y, z) + t*V;
-                 */
-vec3 MACGrid::tracePoint(vec3 _p, real _t)
-{
-    vec3 V = getVelocity(_p);
 
-    utility::printvec(V);
-    V = getVelocity(vec3(_p.x+0.5f*_t*V.x, _p.y+0.5f*_t*V.y, _p.z+0.5f*_t*V.z));
-    utility::printvec(V);
-
-    return _p + _t*V;
 }
-/*
-                // Get the interpolated velocity at a point in space.
-                Vector getVelocity(real x, real y, real z)
-                    Vector V;
-                    V.x = getInterpolatedValue(x/h, y/h-0.5, z/h-0.5, 0);
-                    V.y = getInterpolatedValue(x/h-0.5, y/h, z/h-0.5, 1);
-                    V.z = getInterpolatedValue(x/h-0.5, y/h-0.5, z/h, 2);
-                    return V;
-                 */
+
 vec3 MACGrid::getVelocity(vec3 _v)
 {
-    _v.x = getInterpolatedValue(_v, 0);
-    _v.y = getInterpolatedValue(_v, 1);
-    _v.z = getInterpolatedValue(_v, 2);
-    return _v;
-}
-/*
-                // Get an interpolated data value from the grid.
-                real getInterpolatedValue(real x, real y, real z, int index)
-                    int i = floor(x);
-                    int j = floor(y);
-                    int k = floor(z);
-                    return
-                    (i+1-x) * (j+1-y) * (k+1-z) * cell(i, j, k).u[index] +
-                    (x-i) * (j+1-y) * (k+1-z) * cell(i+1, j, k).u[index] +
-                    (i+1-x) * (y-j) * (k+1-z) * cell(i, j+1, k).u[index] +
-                    (x-i) * (y-j) * (k+1-z) * cell(i+1, j+1, k).u[index] +
-                    (i+1-x) * (j+1-y) * (z-k) * cell(i, j, k+1).u[index] +
-                    (x-i) * (j+1-y) * (z-k) * cell(i+1, j, k+1).u[index] +
-
-                (i+1-x) * (y-j) * (z-k) * cell(i, j+1, k+1).u[index] +
-
-                (x-i) * (y-j) * (z-k) * cell(i+1, j+1, k+1).u[index];
-                 */
-real MACGrid::getInterpolatedValue(vec3 _v, uint idx)
-{
-    int i = std::floor(_v.x);
-    int j = std::floor(_v.y);
-    int k = std::floor(_v.z);
-
-    //I've tripled checked, but come back here if there are mistakes
-    real ret = (i+1-_v.x) * (j+1-_v.y) * (k+1-_v.z) * getCell(i, j, k).velField[idx] +
-            (_v.x - i) * (j+1 - _v.y) * (k+1-_v.z) * getCell(i+1, j, k).velField[idx] +
-            (i+1-_v.x) * (_v.y - j) * (k+1-_v.z) * getCell(i, j+1, k).velField[idx] +
-            (_v.x - i) * (_v.y - j) * (k+1-_v.z) * getCell(i+1, j+1, k).velField[idx] +
-            (i+1 - _v.x) * (j+1 - _v.y) * (_v.z - k) * getCell(i, j, k+1).velField[idx] +
-            (_v.x - i) * (j+1 - _v.y) * (_v.z - k) * getCell(i+1, j, k+1).velField[idx] +
-            (i+1 - _v.x) * (_v.y - j) * (_v.z - k) * getCell(i, j+1, k+1).velField[idx] +
-            (_v.x - i) * (_v.y - j) * (_v.z - k) * getCell(i+1, j+1, k+1).velField[idx];
-    return ret;
 }
 
-bool MACGrid::checkForCell(uint _i, uint _j, uint _k, MG_Cell& _c)
+real MACGrid::getInterpolatedValue(real _a, real _b, real _c)
 {
-    std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_i,_j,_k));
-    if(ret == m_hashTable.end())
-        return false;
+
+}
+
+
+Cell MACGrid::getCell(uint _i, uint _j, uint _k)
+{
+    uint i = utils::getIndex(m_h, uvec3(_i,_j,_k));
+    if(m_cells.size() < i && i > 0)
+        return m_cells[i];
     else
-    {
-        _c = ret->second;
-        return true;
-    }
-
+        return Cell(uvec3(_i,_j,_k));
 }
 
-bool MACGrid::checkForCell(uvec3 _pos, MG_Cell& _c)
+Cell MACGrid::getCell(uvec3 _pos)
 {
-    std::unordered_map<int, MG_Cell>::const_iterator ret = m_hashTable.find(generateKey(_pos.x,_pos.y,_pos.z));
-    if(ret == m_hashTable.end())
-        return false;
+    int i = utils::getIndex(m_h, _pos);
+    if(m_cells.size() < i && i > 0)
+        return m_cells[i];
     else
-    {
-        _c = ret->second;
-        return true;
-    }
+        return Cell(_pos);
 }
 
-
-MG_Cell MACGrid::getCell(uint _key)
-{
-    auto ret = m_hashTable.find(_key);
-    if(ret != m_hashTable.end())
-        return ret->second;
-    else
-    {
-        MG_Cell c;
-        return c;
-    }
-}
-
-MG_Cell MACGrid::getCell(uint _i, uint _j, uint _k)
-{
-    auto ret = m_hashTable.find(generateKey(_i,_j,_k));
-    if(ret != m_hashTable.end())
-        return ret->second;
-    else
-    {
-        MG_Cell c;
-        return c;
-    }
-}
-
-MG_Cell MACGrid::getCell(uvec3 _pos)
-{
-    auto ret = m_hashTable.find(generateKey(_pos.x,_pos.y,_pos.z));
-    if(ret != m_hashTable.end())
-        return ret->second;
-    else
-    {
-        MG_Cell c;
-        return c;
-    }
-}
-
-void MACGrid::insertCellInHashTable(MG_Cell _c)
-{
-    auto test = m_hashTable.find(_c.key);
-    if(test != m_hashTable.end())
-        test->second = _c;
-    else
-        m_hashTable.emplace(_c.key, _c);
-}
-
-vec3 MACGrid::getCellPos(MG_Cell _c)
-{
-    return vec3(_c.gridPos.x * h, _c.gridPos.y * h, _c.gridPos.z * h);
-}
