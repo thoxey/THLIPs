@@ -5,19 +5,35 @@ FlipSim::FlipSim(uint _size, real _cellWidth, uvec3 _b, uvec3 _c):
     m_gridLength(_size)
 {
     m_Grid.initialiseCells(_b, _c);
+
+    m_xMin = _cellWidth;
+    m_yMin = _cellWidth;
+    m_zMin = _cellWidth;
+
+    m_xMax = _cellWidth * _size;
+    m_yMax = _cellWidth * _size;
+    m_zMax = _cellWidth * _size;
+
 }
 
 void FlipSim::step(real _dt)
 {
     real subStep = cfl();
+    std::cout<<"Reclassifying cells... \n";
     m_Grid.reclassifyCells();
+    std::cout<<"Updating Grid... \n";
     updateGrid();
+    std::cout<<"Adding Body Force... \n";
     addBodyForce(subStep);
+    std::cout<<"Projecting... \n";
     project(_dt);
+    std::cout<<"Updating Particles... \n";
     updateParticles();
+    std::cout<<"Advecting... \n";
     advectVelocityField(_dt);
+    //std::cout<<"Wrangling... \n";
+    //wrangleParticles();
 }
-
 
 real FlipSim::cfl()
 {
@@ -26,8 +42,7 @@ real FlipSim::cfl()
 
 void FlipSim::updateGrid()
 {
-
-
+    //Change these to arrays
     std::vector<real> uNum;
     uNum.reserve(m_gridLength*m_gridLength*m_gridLength);
     std::vector<real> uDen;
@@ -296,8 +311,6 @@ void FlipSim::calculatePressure(real _dt)
                     if(backwardIDX < n_fluidCells)
                         backwardP = p(backwardIDX);
 
-
-                    //vel_x - dt / density * pressure_diff_x / mac_grid.deltaX();
                     real pressureDiffX = P-leftP;
                     real pressureDiffY = P-downP;
                     real pressureDiffZ = P-backwardP;
@@ -364,6 +377,11 @@ vec3 FlipSim::getSampledVelocity(const vec3 &_p)
     return vec3(newU, newV, newW);
 }
 
+std::vector<Particle> FlipSim::getParticles() const
+{
+    return m_Grid.m_particles;
+}
+
 void FlipSim::updateParticles()
 {
     for(auto&& c : m_Grid.m_cells)
@@ -382,7 +400,24 @@ void FlipSim::advectVelocityField(real _dt)
         p.advect(_dt);
 }
 
-std::vector<Particle> FlipSim::getParticles()
+void FlipSim::wrangleParticles()
 {
-    return m_Grid.m_particles;
+    for(auto&& p : m_Grid.m_particles)
+    {
+        if(p.pos.x < m_xMin)
+            p.pos.x = m_xMin;
+        if(p.pos.x > m_xMax)
+            p.pos.x = m_xMax;
+
+        if(p.pos.y < m_yMin)
+            p.pos.y = m_yMin;
+        if(p.pos.y > m_yMax)
+            p.pos.y = m_yMax;
+
+        if(p.pos.z < m_zMin)
+            p.pos.z = m_zMin;
+        if(p.pos.z > m_zMax)
+            p.pos.z = m_zMax;
+
+    }
 }

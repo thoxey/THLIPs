@@ -16,7 +16,7 @@ int main()
 {
     std::cout<<"Starting THLIPs... \n";
 
-    FlipSim flipSim = FlipSim(10, 1.0, uvec3(0, 0, 0), uvec3(5,5,5));
+    FlipSim flipSim = FlipSim(10, 1.0, uvec3(0, 0, 0), uvec3(5,10,10));
 
 //    std::vector<MG_Particle> test;
 //    for(uint i = 0; i < 500; i++)
@@ -31,8 +31,8 @@ int main()
 
     for(uint i = 0; i < 100; i++)
     {
-        flipSim.step(0.0025);
         exporter::exportToHoudini(i, flipSim.getParticles());
+        flipSim.step(0.0025);
 //        for(uint i = 0; i < test.size(); i++)
 //        {
 //            real x = utility::randRange(20.0);
@@ -41,7 +41,7 @@ int main()
 //            test[i].pos = vec3(x,y,z);
 //        }
 //        exporter::exportToHoudini(i, test);
-        std::cout<<"Finished Exporting Frame: "<<i<<std::endl;
+        std::cout<<"Finished Exporting Frame: "<<i+1<<std::endl;
     }
 
     std::cout<<"THLIPs Finished! \n";
