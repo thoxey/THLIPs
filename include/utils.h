@@ -126,8 +126,6 @@ struct Particle
         pos.x += vel.x * _dt;
         pos.y += vel.y * _dt;
         pos.z += vel.z * _dt;
-        utils::printvec(vel);
-        std::cout<<idx<<" \n";
     }
 };
 

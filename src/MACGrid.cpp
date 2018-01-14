@@ -130,15 +130,9 @@ void MACGrid::initialiseCells(uvec3 _b, uvec3 _c)
 
 }
 
-void MACGrid::initialiseCellWithFluid(Cell _c)
-{
-
-
-}
-
 int * MACGrid::getNeighbors(Cell _c)
 {
-    int * ret = (int *) malloc(6);
+    static int ret[6];
     uvec3 refPos  = _c.gridPos;
     ret[LEFT]     = utils::getIndex(m_gridLength, getCell(refPos - uleftVec).gridPos);
     ret[RIGHT]    = utils::getIndex(m_gridLength, getCell(refPos - urightVec).gridPos);
@@ -151,18 +145,15 @@ int * MACGrid::getNeighbors(Cell _c)
 
 real MACGrid::getMaxSpeed()
 {
-
+    real maxSpeed = 1.0;//Stops divide by zero error later
+    for(auto&& p : m_particles)
+    {
+        maxSpeed = std::max(maxSpeed, p.vel.x);
+        maxSpeed = std::max(maxSpeed, p.vel.y);
+        maxSpeed = std::max(maxSpeed, p.vel.z);
+    }
+    return maxSpeed;
 }
-
-vec3 MACGrid::getVelocity(vec3 _v)
-{
-}
-
-real MACGrid::getInterpolatedValue(real _a, real _b, real _c)
-{
-
-}
-
 
 Cell & MACGrid::getCell(uint _i, uint _j, uint _k)
 {

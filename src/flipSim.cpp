@@ -18,43 +18,59 @@ FlipSim::FlipSim(uint _size, real _cellWidth, uvec3 _b, uvec3 _c):
 
 void FlipSim::step(real _dt)
 {
-    real subStep = cfl();
-    std::cout<<"Reclassifying cells... \n";
-    m_Grid.reclassifyCells();
-    std::cout<<"Updating Grid... \n";
-    updateGrid();
-    std::cout<<"Adding Body Force... \n";
-    addBodyForce(subStep);
-    std::cout<<"Projecting... \n";
-    project(_dt);
-    std::cout<<"Updating Particles... \n";
-    updateParticles();
-    std::cout<<"Advecting... \n";
-    advectVelocityField(_dt);
-    //std::cout<<"Wrangling... \n";
-    //wrangleParticles();
+    real t = 0.0;
+    while(t < _dt)
+    {
+#define VERBOSE_OUTPUT
+        real subStep = cfl();
+#ifdef VERBOSE_OUTPUT
+        std::cout<<"Reclassifying cells... \n";
+#endif
+        m_Grid.reclassifyCells();
+#ifdef VERBOSE_OUTPUT
+        std::cout<<"Updating Grid... \n";
+#endif
+        updateGrid();
+#ifdef VERBOSE_OUTPUT
+        std::cout<<"Adding Body Force... \n";
+#endif
+        addBodyForce(subStep);
+#ifdef VERBOSE_OUTPUT
+        std::cout<<"Projecting... \n";
+#endif
+        project(_dt);
+#ifdef VERBOSE_OUTPUT
+        std::cout<<"Updating Particles... \n";
+#endif
+        updateParticles();
+#ifdef VERBOSE_OUTPUT
+        std::cout<<"Advecting... \n";
+#endif
+        advectVelocityField(subStep);
+#ifdef VERBOSE_OUTPUT
+//        std::cout<<"Wrangling... \n";
+#endif
+//        wrangleParticles();
+        t += subStep;
+    }
 }
 
 real FlipSim::cfl()
 {
-    return 1.0;
+    real umax = m_Grid.getMaxSpeed() + (std::sqrt(5*m_Grid.m_h*(-1*m_g.y)));
+    real ret = (5*m_Grid.m_h)/umax;
+    return ret * m_k_cfl;
 }
 
 void FlipSim::updateGrid()
 {
     //Change these to arrays
-    std::vector<real> uNum;
-    uNum.reserve(m_gridLength*m_gridLength*m_gridLength);
-    std::vector<real> uDen;
-    uDen.reserve(m_gridLength*m_gridLength*m_gridLength);
-    std::vector<real> vNum;
-    vNum.reserve(m_gridLength*m_gridLength*m_gridLength);
-    std::vector<real> vDen;
-    vDen.reserve(m_gridLength*m_gridLength*m_gridLength);
-    std::vector<real> wNum;
-    wNum.reserve(m_gridLength*m_gridLength*m_gridLength);
-    std::vector<real> wDen;
-    wDen.reserve(m_gridLength*m_gridLength*m_gridLength);
+    real uNum[m_gridLength*m_gridLength*m_gridLength];
+    real uDen[m_gridLength*m_gridLength*m_gridLength];
+    real vNum[m_gridLength*m_gridLength*m_gridLength];
+    real vDen[m_gridLength*m_gridLength*m_gridLength];
+    real wNum[m_gridLength*m_gridLength*m_gridLength];
+    real wDen[m_gridLength*m_gridLength*m_gridLength];
 
     for(uint k = 0; k < m_gridLength; k++)
     {
