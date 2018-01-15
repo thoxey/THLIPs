@@ -19,8 +19,8 @@ FlipSim::FlipSim(uint _size, real _cellWidth, uvec3 _b, uvec3 _c):
 void FlipSim::step(real _dt)
 {
     real t = 0.0;
-    while(t < _dt)
-    {
+//    while(t < _dt)
+//    {
 #define VERBOSE_OUTPUT
         real subStep = cfl();
 #ifdef VERBOSE_OUTPUT
@@ -34,7 +34,7 @@ void FlipSim::step(real _dt)
 #ifdef VERBOSE_OUTPUT
         std::cout<<"Adding Body Force... \n";
 #endif
-        addBodyForce(subStep);
+        addBodyForce(_dt);
 #ifdef VERBOSE_OUTPUT
         std::cout<<"Projecting... \n";
 #endif
@@ -46,13 +46,13 @@ void FlipSim::step(real _dt)
 #ifdef VERBOSE_OUTPUT
         std::cout<<"Advecting... \n";
 #endif
-        advectVelocityField(subStep);
+        advectVelocityField(_dt);
 #ifdef VERBOSE_OUTPUT
-//        std::cout<<"Wrangling... \n";
+        std::cout<<"Wrangling... \n";
 #endif
-//        wrangleParticles();
+        wrangleParticles();
         t += subStep;
-    }
+//    }
 }
 
 real FlipSim::cfl()
@@ -152,18 +152,25 @@ void FlipSim::enforceDirichlet()
                 int * neighbors = m_Grid.getNeighbors(m_Grid.m_cells[idx]);
                 //If we are neighboring/are a SOLID dont add velocity into the solid
 
+                if(m_Grid.m_cells[idx].type  == SOLID)
+                {
+                    m_Grid.m_cells[idx].setU(0.0);
+                    m_Grid.m_cells[idx].setV(0.0);
+                    m_Grid.m_cells[idx].setW(0.0);
+                }
+
                 // X velocity
-                if((m_Grid.m_cells[idx].type  == SOLID && m_Grid.m_cells[idx].U() > 0) || (m_Grid.m_cells[neighbors[LEFT]].type == SOLID && m_Grid.m_cells[idx].U() < 0))
+                if(m_Grid.m_cells[neighbors[LEFT]].type == SOLID)
                 {
                     m_Grid.m_cells[idx].setU(0.0);
                 }
                 // Y velocity
-                if((m_Grid.m_cells[idx].type  == SOLID && m_Grid.m_cells[idx].V() > 0) || (m_Grid.m_cells[neighbors[DOWN]].type == SOLID && m_Grid.m_cells[idx].V() < 0))
+                if(m_Grid.m_cells[neighbors[DOWN]].type == SOLID)
                 {
                     m_Grid.m_cells[idx].setV(0.0);
                 }
                 // Z velocity
-                if((m_Grid.m_cells[idx].type  == SOLID && m_Grid.m_cells[idx].W() > 0) || (m_Grid.m_cells[neighbors[BACKWARD]].type == SOLID && m_Grid.m_cells[idx].W() < 0))
+                if(m_Grid.m_cells[neighbors[BACKWARD]].type == SOLID)
                 {
                     m_Grid.m_cells[idx].setW(0.0);
                 }
@@ -405,7 +412,9 @@ void FlipSim::updateParticles()
         for(uint idx : c.m_paticleIDXs)
         {
             vec3 sampledVel = getSampledVelocity(m_Grid.m_particles[idx].pos);
-            m_Grid.m_particles[idx].updateVel(sampledVel);
+            vec3 cellCol = ((vec3)c.gridPos)/(real)m_gridLength;
+            utils::printvec(cellCol);
+            m_Grid.m_particles[idx].updateVel(sampledVel, cellCol);
         }
     }
 }
@@ -421,19 +430,38 @@ void FlipSim::wrangleParticles()
     for(auto&& p : m_Grid.m_particles)
     {
         if(p.pos.x < m_xMin)
+        {
             p.pos.x = m_xMin;
+            p.vel.x = -p.vel.x;
+        }
         if(p.pos.x > m_xMax)
+        {
             p.pos.x = m_xMax;
+            p.vel.y = -p.vel.x;
+        }
 
         if(p.pos.y < m_yMin)
+        {
             p.pos.y = m_yMin;
+            p.vel.y = -p.vel.y;
+        }
         if(p.pos.y > m_yMax)
+        {
             p.pos.y = m_yMax;
+            p.vel.y = -p.vel.y;
+        }
 
         if(p.pos.z < m_zMin)
+        {
             p.pos.z = m_zMin;
+            p.vel.z = -p.vel.z;
+        }
         if(p.pos.z > m_zMax)
+        {
             p.pos.z = m_zMax;
+            p.vel.z = -p.vel.z;
+        }
 
     }
+    enforceDirichlet();
 }

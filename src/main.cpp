@@ -16,12 +16,12 @@ int main()
 {
     std::cout<<"Starting THLIPs... \n";
 
-    FlipSim flipSim = FlipSim(10, 1.0, uvec3(0, 0, 0), uvec3(5,10,10));
+    FlipSim flipSim = FlipSim(10, 1.0, uvec3(0, 5, 0), uvec3(10,10,10));
 
     for(uint i = 0; i < 100; i++)
     {
         exporter::exportToHoudini(i, flipSim.getParticles());
-        flipSim.step(0.0025);
+        flipSim.step(0.025);
         std::cout<<"--------------------------\n"<<"Finished Exporting Frame: "<<i+1<<"\n"<<"--------------------------"<<std::endl;
     }
 

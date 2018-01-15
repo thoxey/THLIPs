@@ -102,6 +102,8 @@ struct Particle
 
     vec3 vel;
 
+    vec3 cellCol;
+
     uint idx;
 
     Particle()
@@ -114,9 +116,10 @@ struct Particle
     {
         pos = _newPos;
     }
-    void updateVel(vec3 _newVel)
+    void updateVel(vec3 _newVel, vec3 _cellCol)
     {
         vel = _newVel;
+        cellCol = _cellCol;
     }
     void advect(real _dt)
     {
