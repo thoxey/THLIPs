@@ -4,7 +4,7 @@ MACGrid::MACGrid(uint _size, real _cellWidth):
     m_gridLength(_size),
     m_h(_cellWidth)
 {}
-
+//----------------------------------------------------------------------------------------------------------------------
 vec3 MACGrid::getJitteredPos(Cell _c, uint _count)
 {
     real ho2 = m_h/2;
@@ -65,12 +65,12 @@ vec3 MACGrid::getJitteredPos(Cell _c, uint _count)
         break;
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 vec3 MACGrid::getCellPos(Cell _c)
 {
     return vec3(_c.gridPos.x * m_h, _c.gridPos.y * m_h, _c.gridPos.z * m_h);
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void MACGrid::reclassifyCells()
 {
     for(auto&& c : m_cells)
@@ -96,7 +96,7 @@ void MACGrid::reclassifyCells()
         }
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void MACGrid::initialiseCells(uvec3 _b, uvec3 _c)
 {
     for(uint k = 0; k < m_gridLength; k++)
@@ -129,7 +129,7 @@ void MACGrid::initialiseCells(uvec3 _b, uvec3 _c)
         }
 
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 int * MACGrid::getNeighbors(Cell _c)
 {
     static int ret[6];
@@ -142,7 +142,7 @@ int * MACGrid::getNeighbors(Cell _c)
     ret[BACKWARD] = utils::getIndex(m_gridLength, getCell(refPos - ubackwardVec).gridPos);
     return ret;
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 real MACGrid::getMaxSpeed()
 {
     real maxSpeed = 1.0;//Stops divide by zero error later
@@ -154,7 +154,7 @@ real MACGrid::getMaxSpeed()
     }
     return maxSpeed;
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 Cell & MACGrid::getCell(uint _i, uint _j, uint _k)
 {
     uint i = utils::getIndex(m_gridLength, uvec3(_i,_j,_k));
@@ -166,7 +166,7 @@ Cell & MACGrid::getCell(uint _i, uint _j, uint _k)
         return c;
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 Cell MACGrid::getCell(uvec3 _pos)
 {
     int i = utils::getIndex(m_h, _pos);

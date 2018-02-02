@@ -1,5 +1,5 @@
 #include "flipSim.h"
-
+//----------------------------------------------------------------------------------------------------------------------
 FlipSim::FlipSim(uint _size, real _cellWidth, uvec3 _b, uvec3 _c):
     m_Grid(_size, _cellWidth),
     m_gridLength(_size)
@@ -15,7 +15,7 @@ FlipSim::FlipSim(uint _size, real _cellWidth, uvec3 _b, uvec3 _c):
     m_zMax = _cellWidth * _size;
 
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::step(real _dt)
 {
     real t = 0.0;
@@ -54,14 +54,14 @@ void FlipSim::step(real _dt)
         t += subStep;
 //    }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 real FlipSim::cfl()
 {
     real umax = m_Grid.getMaxSpeed() + (std::sqrt(5*m_Grid.m_h*(-1*m_g.y)));
     real ret = (5*m_Grid.m_h)/umax;
     return ret * m_k_cfl;
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::updateGrid()
 {
     //Change these to arrays
@@ -126,20 +126,20 @@ void FlipSim::updateGrid()
         }
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::addBodyForce(real _dt)
 {
     for(auto&& c : m_Grid.m_cells)
         c.updateVel(m_g * _dt);
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::project(real _dt)
 {
     enforceDirichlet();
     calculatePressure(_dt);
     enforceDirichlet();
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::enforceDirichlet()
 {
     for(uint k = 0; k < m_gridLength; k++)
@@ -178,7 +178,7 @@ void FlipSim::enforceDirichlet()
         }
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::calculatePressure(real _dt)
 {
     uint n_fluidCells = 0;
@@ -348,7 +348,7 @@ void FlipSim::calculatePressure(real _dt)
         }
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 vec3 FlipSim::getSampledVelocity(const vec3 &_p)
 {
     vec3 p = _p;
@@ -399,12 +399,12 @@ vec3 FlipSim::getSampledVelocity(const vec3 &_p)
 
     return vec3(newU, newV, newW);
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 std::vector<Particle> FlipSim::getParticles() const
 {
     return m_Grid.m_particles;
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::updateParticles()
 {
     for(auto&& c : m_Grid.m_cells)
@@ -413,18 +413,18 @@ void FlipSim::updateParticles()
         {
             vec3 sampledVel = getSampledVelocity(m_Grid.m_particles[idx].pos);
             vec3 cellCol = ((vec3)c.gridPos)/(real)m_gridLength;
-            utils::printvec(cellCol);
+            //utils::printvec(cellCol);
             m_Grid.m_particles[idx].updateVel(sampledVel, cellCol);
         }
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::advectVelocityField(real _dt)
 {
     for(auto&& p : m_Grid.m_particles)
         p.advect(_dt);
 }
-
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::wrangleParticles()
 {
     for(auto&& p : m_Grid.m_particles)
@@ -465,3 +465,4 @@ void FlipSim::wrangleParticles()
     }
     //enforceDirichlet();
 }
+//----------------------------------------------------------------------------------------------------------------------

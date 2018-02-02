@@ -19,6 +19,8 @@ public:
     //Constructors
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief ctor
+    /// @param uint _size : Amount of cells per axis
+    /// @param real _cellWidth : The width (and therefore height and depth) of each cell in meters
     //----------------------------------------------------------------------------------------------------------------------
     MACGrid(uint _size, real _cellWidth);
 
@@ -32,7 +34,8 @@ public:
     std::vector<Particle> m_particles;
 
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief Returns the neighbors of a particular cell
+    /// @brief Returns the indicies neighbors of a particular cell
+    /// @param Cell _c : The cell whose neighbors we want to return
     //----------------------------------------------------------------------------------------------------------------------
     int *getNeighbors(Cell _c);
     //----------------------------------------------------------------------------------------------------------------------
@@ -42,25 +45,32 @@ public:
 
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Returns a cell based on grid pos
+    /// @param uint _i : The i pos of the cell
+    /// @param uint _j : The j pos of the cell
+    /// @param uint _k : The k pos of the cell
     //----------------------------------------------------------------------------------------------------------------------
     Cell &getCell(uint _i, uint _j, uint _k);
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Returns a cell based on grid pos
+    /// @param The position of the cell in te grid
     //----------------------------------------------------------------------------------------------------------------------
     Cell getCell(uvec3 _pos);
 
     //----------------------------------------------------------------------------------------------------------------------
     /// @brief Sets the bounds of where the fluid is, where the solids are and where the air is
+    /// @param uvec3 _b : The bottom corner of the fluid cells (0,0,0)
+    /// @param uvec3 _c : The top corner of the fluid cells (1,1,1)
     //----------------------------------------------------------------------------------------------------------------------
     void initialiseCells(uvec3 _b, uvec3 _c);
 
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief
+    /// @brief Updates the types of each cell depending on the marker particles
     //----------------------------------------------------------------------------------------------------------------------
     void reclassifyCells();
 
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief
+    /// @brief Returns the position of the cell in the grid
+    /// @param Cell _c : The cell whose position we are querying
     //----------------------------------------------------------------------------------------------------------------------
     vec3 getCellPos(Cell _c);
 
@@ -80,11 +90,13 @@ private:
     uint m_cellCount;
 
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief
+    /// @brief The amount of particles in the simulation
     //----------------------------------------------------------------------------------------------------------------------
     uint m_particleCount = 0;
     //----------------------------------------------------------------------------------------------------------------------
-    /// @brief
+    /// @brief Returns a random position in the bounds of a cell octant
+    /// @param Cell _c : The cell we want the position in
+    /// @param uint _count : The count of the particle (0-7) used to determine which octant we are in
     //----------------------------------------------------------------------------------------------------------------------
     vec3 getJitteredPos(Cell _c, uint _count);
 };
