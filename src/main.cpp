@@ -16,7 +16,7 @@ int main()
 {
     std::cout<<"Starting THLIPs... \n";
 
-    FlipSim flipSim = FlipSim(10, 1.0, uvec3(0, 5, 0), uvec3(10,10,10));
+    FlipSim flipSim = FlipSim(10, 0.1, uvec3(0, 5, 0), uvec3(10,10,10));
 
     for(uint i = 0; i < 100; i++)
     {

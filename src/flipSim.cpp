@@ -160,17 +160,17 @@ void FlipSim::enforceDirichlet()
                 }
 
                 // X velocity
-                if(m_Grid.m_cells[neighbors[LEFT]].type == SOLID)
+                if(m_Grid.m_cells[neighbors[LEFT]].type == SOLID && m_Grid.m_cells[neighbors[LEFT]].U() < 0.0)
                 {
                     m_Grid.m_cells[idx].setU(0.0);
                 }
                 // Y velocity
-                if(m_Grid.m_cells[neighbors[DOWN]].type == SOLID)
+                if(m_Grid.m_cells[neighbors[DOWN]].type == SOLID && m_Grid.m_cells[neighbors[DOWN]].V() < 0.0)
                 {
                     m_Grid.m_cells[idx].setV(0.0);
                 }
                 // Z velocity
-                if(m_Grid.m_cells[neighbors[BACKWARD]].type == SOLID)
+                if(m_Grid.m_cells[neighbors[BACKWARD]].type == SOLID && m_Grid.m_cells[neighbors[BACKWARD]].W() < 0.0)
                 {
                     m_Grid.m_cells[idx].setW(0.0);
                 }
@@ -463,5 +463,5 @@ void FlipSim::wrangleParticles()
         }
 
     }
-    enforceDirichlet();
+    //enforceDirichlet();
 }
