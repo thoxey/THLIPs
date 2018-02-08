@@ -30,7 +30,8 @@ void exportToHoudini(uint _frameNumber, std::vector<Particle> _particles)
         for(unsigned int i=0; i<_particles.size(); ++i)
         {
             ss<<_particles[i].pos.x<<" "<<_particles[i].pos.y<<" "<<_particles[i].pos.z << " 1 ";
-            ss<<"("<<_particles[i].vel.x<<" "<<_particles[i].vel.y<<" "<< _particles[i].vel.z<<")\n";
+            //ss<<"("<<_particles[i].cellCol.x<<" "<<_particles[i].cellCol.y<<" "<< _particles[i].cellCol.z<<")\n";
+            ss<<"("<<std::abs(_particles[i].vel.x)<<" "<<std::abs(_particles[i].vel.y)<<" "<<std::abs(_particles[i].vel.z)<<")\n";
         }
 
         // now write out the index values

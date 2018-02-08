@@ -67,14 +67,14 @@ bool isInBounds(vec3 _a, vec3 _b, vec3 _c)
         return false;
 }
 //----------------------------------------------------------------------------------------------------------------------
-void printvec(uvec3 _x)
+void printvec(uvec3 _x, std::string _message)
 {
-    std::cout<<"X:"<<_x.x<<" Y: "<<_x.y<<" Z: "<<_x.z<<"\n";
+    std::cout<<"X:"<<_x.x<<" Y: "<<_x.y<<" Z: "<<_x.z<<_message<<"\n";
 }
 //----------------------------------------------------------------------------------------------------------------------
-void printvec(vec3 _x)
+void printvec(vec3 _x, std::string _message)
 {
-    std::cout<<"X:"<<_x.x<<" Y: "<<_x.y<<" Z: "<<_x.z<<"\n";
+    std::cout<<"X:"<<_x.x<<" Y: "<<_x.y<<" Z: "<<_x.z<<_message<<"\n";
 }
 //----------------------------------------------------------------------------------------------------------------------
 real trilinearHatKernel(vec3 _dist, real _dx)

@@ -18,10 +18,10 @@ int main()
 
     FlipSim flipSim = FlipSim(10, 0.1, uvec3(0, 5, 0), uvec3(10,10,10));
 
-    for(uint i = 0; i < 100; i++)
+    for(uint i = 0; i < 50; i++)
     {
         exporter::exportToHoudini(i, flipSim.getParticles());
-        flipSim.step(0.025);
+        flipSim.step(0.1);
         std::cout<<"--------------------------\n"<<"Finished Exporting Frame: "<<i+1<<"\n"<<"--------------------------"<<std::endl;
     }
 

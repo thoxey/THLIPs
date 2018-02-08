@@ -112,13 +112,15 @@ bool isInBounds(vec3 _a, vec3 _b, vec3 _c);
 //----------------------------------------------------------------------------------------------------------------------
 /// @brief Prints the vector inputted
 /// @param uvec3 _x : The vector to print
+/// @param string _message : An optional message to print after the vector
 //----------------------------------------------------------------------------------------------------------------------
-void printvec(uvec3 _x);
+void printvec(uvec3 _x, std::string _message  = "");
 //----------------------------------------------------------------------------------------------------------------------
 /// @brief Prints the vector inputted
 /// @param vec3 _x : The vector to print
+/// @param string _message : An optional message to print after the vector
 //----------------------------------------------------------------------------------------------------------------------
-void printvec(vec3 _x);
+void printvec(vec3 _x, std::string _message  = "");
 //----------------------------------------------------------------------------------------------------------------------
 /// @brief Calculates the trilinear hat kernel
 /// @param vec3 _dist : The distance used to calculate the hat funtion

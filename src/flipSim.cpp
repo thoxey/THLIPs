@@ -13,7 +13,6 @@ FlipSim::FlipSim(uint _size, real _cellWidth, uvec3 _b, uvec3 _c):
     m_xMax = _cellWidth * _size;
     m_yMax = _cellWidth * _size;
     m_zMax = _cellWidth * _size;
-
 }
 //----------------------------------------------------------------------------------------------------------------------
 void FlipSim::step(real _dt)
@@ -21,7 +20,7 @@ void FlipSim::step(real _dt)
     real t = 0.0;
 //    while(t < _dt)
 //    {
-#define VERBOSE_OUTPUT
+//#define VERBOSE_OUTPUT
         real subStep = cfl();
 #ifdef VERBOSE_OUTPUT
         std::cout<<"Reclassifying cells... \n";
@@ -30,7 +29,7 @@ void FlipSim::step(real _dt)
 #ifdef VERBOSE_OUTPUT
         std::cout<<"Updating Grid... \n";
 #endif
-        updateGrid();
+        //updateGrid();
 #ifdef VERBOSE_OUTPUT
         std::cout<<"Adding Body Force... \n";
 #endif
@@ -38,7 +37,7 @@ void FlipSim::step(real _dt)
 #ifdef VERBOSE_OUTPUT
         std::cout<<"Projecting... \n";
 #endif
-        project(_dt);
+        //project(_dt);
 #ifdef VERBOSE_OUTPUT
         std::cout<<"Updating Particles... \n";
 #endif
@@ -65,12 +64,13 @@ real FlipSim::cfl()
 void FlipSim::updateGrid()
 {
     //Change these to arrays
-    real uNum[m_gridLength*m_gridLength*m_gridLength];
-    real uDen[m_gridLength*m_gridLength*m_gridLength];
-    real vNum[m_gridLength*m_gridLength*m_gridLength];
-    real vDen[m_gridLength*m_gridLength*m_gridLength];
-    real wNum[m_gridLength*m_gridLength*m_gridLength];
-    real wDen[m_gridLength*m_gridLength*m_gridLength];
+    uint gridCubed = m_gridLength*m_gridLength*m_gridLength;
+    real uNum[gridCubed];
+    real uDen[gridCubed];
+    real vNum[gridCubed];
+    real vDen[gridCubed];
+    real wNum[gridCubed];
+    real wDen[gridCubed];
 
     for(uint k = 0; k < m_gridLength; k++)
     {
@@ -78,12 +78,13 @@ void FlipSim::updateGrid()
         {
             for(uint i = 0; i < m_gridLength; i++)
             {
-                uNum[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
-                uDen[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
-                vNum[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
-                vDen[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
-                wNum[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
-                wDen[utils::getIndex(m_gridLength, uvec3(i,j,k))] = 0.0;
+                uint idx = utils::getIndex(m_gridLength, uvec3(i,j,k));
+                uNum[idx] = 0.0;
+                uDen[idx] = 0.0;
+                vNum[idx] = 0.0;
+                vDen[idx] = 0.0;
+                wNum[idx] = 0.0;
+                wDen[idx] = 0.0;
             }
         }
     }
@@ -97,16 +98,19 @@ void FlipSim::updateGrid()
                 for(uint i = 0; i < m_gridLength; i++)
                 {
                     vec3 cellPos = m_Grid.getCellPos(m_Grid.getCell(i,j,k));
-                    real kernel = utils::trilinearHatKernel(p.pos - cellPos - vec3(0.5,0,0), m_Grid.m_h);
+                    //FIX THIS===========================================================<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                    real kernel = 1.0f; //utils::trilinearHatKernel(p.pos - cellPos - vec3(0.5,0,0), m_Grid.m_h);
+                    //std::cout<<kernel<<" - Kernel \n";
+                    uint idx = utils::getIndex(m_gridLength, uvec3(i,j,k));
 
-                    uNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = p.vel.x * kernel;
-                    uDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = kernel;
+                    uNum[idx] = p.vel.x * kernel;
+                    uDen[idx] = kernel;
 
-                    vNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = p.vel.y * kernel;
-                    vDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = kernel;
+                    vNum[idx] = p.vel.y * kernel;
+                    vDen[idx] = kernel;
 
-                    wNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = p.vel.z * kernel;
-                    wDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] = kernel;
+                    wNum[idx] = p.vel.z * kernel;
+                    wDen[idx] = kernel;
                 }
             }
         }
@@ -118,9 +122,10 @@ void FlipSim::updateGrid()
         {
             for(uint i = 0; i < m_gridLength; i++)
             {
-                real newU = uNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] / uDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))];
-                real newV = vNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] / vDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))];
-                real newW = wNum[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))] / wDen[utils::getIndex(m_Grid.m_h, uvec3(i,j,k))];
+                uint idx = utils::getIndex(m_gridLength, uvec3(i,j,k));
+                real newU = uNum[idx] / uDen[idx];
+                real newV = vNum[idx] / vDen[idx];
+                real newW = wNum[idx] / wDen[idx];
                 m_Grid.getCell(i,j,k).updateVel(vec3(newU, newV, newW));
             }
         }
@@ -130,7 +135,7 @@ void FlipSim::updateGrid()
 void FlipSim::addBodyForce(real _dt)
 {
     for(auto&& c : m_Grid.m_cells)
-        c.updateVel(m_g * _dt);
+        c.increaseVel(m_g * _dt);
 }
 //----------------------------------------------------------------------------------------------------------------------
 void FlipSim::project(real _dt)
@@ -194,6 +199,8 @@ void FlipSim::calculatePressure(real _dt)
             fluidIDXs.push_back(-1);
         }
     }
+
+    assert(n_fluidCells > 0);
 
     //Laplacian Matrix
     Eigen::SparseMatrix<real> A(n_fluidCells, n_fluidCells);
@@ -412,8 +419,8 @@ void FlipSim::updateParticles()
         for(uint idx : c.m_paticleIDXs)
         {
             vec3 sampledVel = getSampledVelocity(m_Grid.m_particles[idx].pos);
-            vec3 cellCol = ((vec3)c.gridPos)/(real)m_gridLength;
-            //utils::printvec(cellCol);
+            utils::printvec(sampledVel);
+            vec3 cellCol = c.getVelField();
             m_Grid.m_particles[idx].updateVel(sampledVel, cellCol);
         }
     }

@@ -116,6 +116,7 @@ void MACGrid::initialiseCells(uvec3 _b, uvec3 _c)
                             Particle p;
                             p.idx = m_particleCount++;
                             p.pos = getJitteredPos(c, i);
+                            p.cellCol = c.getVelField();
                             m_particles.push_back(p);
                             c.m_paticleIDXs.push_back(p.idx);
                         }
