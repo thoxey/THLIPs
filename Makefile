@@ -54,17 +54,13 @@ OBJECTS_DIR   = obj/
 SOURCES       = src/cell.cpp \
 		src/exporter.cpp \
 		src/flipSim.cpp \
-		src/flipSim_copy.cpp \
 		src/MACGrid.cpp \
-		src/MACGrid_copy.cpp \
 		src/main.cpp \
 		src/utils.cpp 
 OBJECTS       = obj/cell.o \
 		obj/exporter.o \
 		obj/flipSim.o \
-		obj/flipSim_copy.o \
 		obj/MACGrid.o \
-		obj/MACGrid_copy.o \
 		obj/main.o \
 		obj/utils.o
 DIST          = /opt/Qt5.9.0/5.9/gcc_64/mkspecs/features/spec_pre.prf \
@@ -254,9 +250,7 @@ DIST          = /opt/Qt5.9.0/5.9/gcc_64/mkspecs/features/spec_pre.prf \
 		include/utils.h src/cell.cpp \
 		src/exporter.cpp \
 		src/flipSim.cpp \
-		src/flipSim_copy.cpp \
 		src/MACGrid.cpp \
-		src/MACGrid_copy.cpp \
 		src/main.cpp \
 		src/utils.cpp
 QMAKE_TARGET  = Thlips
@@ -655,7 +649,7 @@ distdir: FORCE
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /opt/Qt5.9.0/5.9/gcc_64/mkspecs/features/data/dummy.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents include/cell.h include/exporter.h include/flipSim.h include/MACGrid.h include/utils.h $(DISTDIR)/
-	$(COPY_FILE) --parents src/cell.cpp src/exporter.cpp src/flipSim.cpp src/flipSim_copy.cpp src/MACGrid.cpp src/MACGrid_copy.cpp src/main.cpp src/utils.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents src/cell.cpp src/exporter.cpp src/flipSim.cpp src/MACGrid.cpp src/main.cpp src/utils.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -717,16 +711,10 @@ obj/flipSim.o: src/flipSim.cpp include/flipSim.h \
 		include/cell.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/flipSim.o src/flipSim.cpp
 
-obj/flipSim_copy.o: src/flipSim_copy.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/flipSim_copy.o src/flipSim_copy.cpp
-
 obj/MACGrid.o: src/MACGrid.cpp include/MACGrid.h \
 		include/utils.h \
 		include/cell.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/MACGrid.o src/MACGrid.cpp
-
-obj/MACGrid_copy.o: src/MACGrid_copy.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o obj/MACGrid_copy.o src/MACGrid_copy.cpp
 
 obj/main.o: src/main.cpp include/flipSim.h \
 		include/MACGrid.h \

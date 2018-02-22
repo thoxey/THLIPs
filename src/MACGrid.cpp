@@ -146,12 +146,12 @@ int * MACGrid::getNeighbors(Cell _c)
 //----------------------------------------------------------------------------------------------------------------------
 real MACGrid::getMaxSpeed()
 {
-    real maxSpeed = 1.0;//Stops divide by zero error later
+    real maxSpeed = 0.0001;//Stops divide by zero error later
     for(auto&& p : m_particles)
     {
-        maxSpeed = std::max(maxSpeed, p.vel.x);
-        maxSpeed = std::max(maxSpeed, p.vel.y);
-        maxSpeed = std::max(maxSpeed, p.vel.z);
+        maxSpeed = std::max(maxSpeed, std::abs(p.vel.x));
+        maxSpeed = std::max(maxSpeed, std::abs(p.vel.y));
+        maxSpeed = std::max(maxSpeed, std::abs(p.vel.z));
     }
     return maxSpeed;
 }
