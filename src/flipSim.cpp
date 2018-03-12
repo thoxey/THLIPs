@@ -18,52 +18,52 @@ FlipSim::FlipSim(uint _size, real _cellWidth, uvec3 _b, uvec3 _c):
 void FlipSim::step(real _dt)
 {
     real t = 0.0;
-    //    while(t < _dt)
-    //    {
-    //#define VERBOSE_OUTPUT
-    real subStep = cfl();
+    while(t < _dt)
+    {
+        real subStep = cfl();
+        //#define VERBOSE_OUTPUT
 #ifdef VERBOSE_OUTPUT
-    std::cout<<"Reclassifying cells... \n";
+        std::cout<<"Reclassifying cells... \n";
 #endif
-    m_Grid.reclassifyCells();
+        m_Grid.reclassifyCells();
 #ifdef VERBOSE_OUTPUT
-    std::cout<<"Updating Grid... \n";
+        std::cout<<"Updating Grid... \n";
 #endif
-    updateGrid();
+        updateGrid();
 #ifdef VERBOSE_OUTPUT
-    std::cout<<"Adding Body Force... \n";
+        std::cout<<"Adding Body Force... \n";
 #endif
-    addBodyForce(_dt);
+        addBodyForce(t);
 #ifdef VERBOSE_OUTPUT
-    std::cout<<"Projecting... \n";
+        std::cout<<"Projecting... \n";
 #endif
-    project(_dt);
+        project(t);
 #ifdef VERBOSE_OUTPUT
-    std::cout<<"Updating Particles... \n";
+        std::cout<<"Updating Particles... \n";
 #endif
-    updateParticles();
+        updateParticles();
 #ifdef VERBOSE_OUTPUT
-    std::cout<<"Advecting... \n";
+        std::cout<<"Advecting... \n";
 #endif
-    advectVelocityField(_dt);
+        advectVelocityField(t);
 #ifdef VERBOSE_OUTPUT
-    std::cout<<"Wrangling... \n";
+        std::cout<<"Wrangling... \n";
 #endif
-    wrangleParticles();
-    t += subStep;
-    //    }
+        wrangleParticles();
+        t += _dt;//subStep;
+    }
 }
 //----------------------------------------------------------------------------------------------------------------------
 real FlipSim::cfl()
 {
     real umax = m_Grid.getMaxSpeed() + (std::sqrt(5*m_Grid.m_h*(-1*m_g.y)));
     real ret = (5*m_Grid.m_h)/umax;
+    std::cout<<"CFL: "<<ret * m_k_cfl<<"\n";
     return ret * m_k_cfl;
 }
 //----------------------------------------------------------------------------------------------------------------------
 void FlipSim::updateGrid()
 {
-    //Change these to arrays
     uint gridCubed = m_gridLength*m_gridLength*m_gridLength;
     real uNum[gridCubed];
     real uDen[gridCubed];
@@ -168,34 +168,34 @@ void FlipSim::enforceDirichlet()
                 // X velocity
                 if(m_Grid.m_cells[neighbors[LEFT]].type == SOLID && m_Grid.m_cells[idx].U() < 0.0)
                 {
-                    utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc LEFT");
+                    //utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc LEFT");
                     m_Grid.m_cells[idx].setU(0.0);
                 }
                 if(m_Grid.m_cells[neighbors[RIGHT]].type == SOLID && m_Grid.m_cells[idx].U() > 0.0)
                 {
-                    utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc RIGHT");
+                    //utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc RIGHT");
                     m_Grid.m_cells[idx].setU(0.0);
                 }
                 // Y velocity
                 if(m_Grid.m_cells[neighbors[DOWN]].type == SOLID && m_Grid.m_cells[idx].V() > 0.0)
                 {
-                    utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc DOWN");
+                    //utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc DOWN");
                     m_Grid.m_cells[idx].setV(0.0);
                 }
                 if(m_Grid.m_cells[neighbors[UP]].type == SOLID && m_Grid.m_cells[idx].V() < 0.0)
                 {
-                    utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc UP");
+                    //utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc UP");
                     m_Grid.m_cells[idx].setV(0.0);
                 }
                 // Z velocity
                 if(m_Grid.m_cells[neighbors[BACKWARD]].type == SOLID && m_Grid.m_cells[idx].W() < 0.0)
                 {
-                    utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc BACKWARD");
+                    //utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc BACKWARD");
                     m_Grid.m_cells[idx].setW(0.0);
                 }
                 if(m_Grid.m_cells[neighbors[FORWARD]].type == SOLID && m_Grid.m_cells[idx].W() > 0.0)
                 {
-                    utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc FORWARD");
+                    //utils::printvec(m_Grid.m_cells[idx].getVelField(), "Dirichlet enforced bc FORWARD");
                     m_Grid.m_cells[idx].setW(0.0);
                 }
             }
@@ -228,7 +228,7 @@ void FlipSim::calculatePressure(real _dt)
     //Divergence
     VectorX b(n_fluidCells);
 
-    real scale = 1/(_dt);
+    real scale = _dt/(m_Grid.m_h*m_Grid.m_h);
 
     for(uint k = 0; k < m_gridLength; k++)
     {
@@ -250,6 +250,7 @@ void FlipSim::calculatePressure(real _dt)
                         }
                         n_NonSolidNeighbors++;
                     }
+
                     if(m_Grid.m_cells[neighbor[RIGHT]].type != SOLID)
                     {
                         if(m_Grid.m_cells[neighbor[RIGHT]].type == FLUID)
@@ -267,6 +268,7 @@ void FlipSim::calculatePressure(real _dt)
                         }
                         n_NonSolidNeighbors++;
                     }
+
                     if(m_Grid.m_cells[neighbor[UP]].type != SOLID)
                     {
                         if(m_Grid.m_cells[neighbor[UP]].type == FLUID)
@@ -284,6 +286,7 @@ void FlipSim::calculatePressure(real _dt)
                         }
                         n_NonSolidNeighbors++;
                     }
+
                     if(m_Grid.m_cells[neighbor[FORWARD]].type != SOLID)
                     {
                         if(m_Grid.m_cells[neighbor[FORWARD]].type == FLUID)
@@ -332,6 +335,12 @@ void FlipSim::calculatePressure(real _dt)
     solver.compute(A);
     p = solver.solve(b);
 
+//    for(uint i = 0; i<p.rows(); i++)
+//    {
+//        if(isnan(p(i)))
+//            p(i) = 0;
+//    }
+
     for(uint k = 0; k < m_gridLength; k++)
     {
         for(uint j = 0; j < m_gridLength; j++)
@@ -345,7 +354,7 @@ void FlipSim::calculatePressure(real _dt)
                 {
                     real P = p(idx);
 
-                    real leftP = 0.0f;
+                    real leftP = 0.0;
                     uint leftIDX = m_Grid.m_cells[neighbors[LEFT]].getIDX(m_gridLength);
                     if(leftIDX < n_fluidCells)
                         leftP = p(leftIDX);

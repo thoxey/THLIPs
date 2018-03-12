@@ -40,6 +40,8 @@ real randRange(real _max)
 
     std::uniform_real_distribution<> uniform_dist(0.0, _max);
 
+    real ret = uniform_dist(e);
+
     return uniform_dist(e);
 }
 //----------------------------------------------------------------------------------------------------------------------
