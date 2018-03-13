@@ -21,6 +21,7 @@ void FlipSim::step(real _dt)
     while(t < _dt)
     {
         real subStep = cfl();
+        t += std::min(subStep, _dt);
         //#define VERBOSE_OUTPUT
 #ifdef VERBOSE_OUTPUT
         std::cout<<"Reclassifying cells... \n";
@@ -50,7 +51,7 @@ void FlipSim::step(real _dt)
         std::cout<<"Wrangling... \n";
 #endif
         wrangleParticles();
-        t += _dt;//subStep;
+
     }
 }
 //----------------------------------------------------------------------------------------------------------------------
@@ -64,13 +65,13 @@ real FlipSim::cfl()
 //----------------------------------------------------------------------------------------------------------------------
 void FlipSim::updateGrid()
 {
-    uint gridCubed = m_gridLength*m_gridLength*m_gridLength;
-    real uNum[gridCubed];
-    real uDen[gridCubed];
-    real vNum[gridCubed];
-    real vDen[gridCubed];
-    real wNum[gridCubed];
-    real wDen[gridCubed];
+    uint cellCount = m_gridLength*m_gridLength*m_gridLength;
+    real uNum[cellCount];
+    real uDen[cellCount];
+    real vNum[cellCount];
+    real vDen[cellCount];
+    real wNum[cellCount];
+    real wDen[cellCount];
 
     for(uint k = 0; k < m_gridLength; k++)
     {
@@ -202,6 +203,19 @@ void FlipSim::enforceDirichlet()
         }
     }
 }
+
+void FlipSim::calculateNeighborLaplacian(uint _idx, uint _neighborIdx, real _scale, std::vector<int> _fluidIDXs, Eigen::SparseMatrix<real> &_A, uint &_nonSolidNeighbors)
+{
+    if(m_Grid.m_cells[_neighborIdx].type != SOLID)
+    {
+        if(m_Grid.m_cells[_neighborIdx].type == FLUID)
+        {
+            _A.insert(_fluidIDXs[_neighborIdx], _idx) = _scale;
+        }
+        _nonSolidNeighbors++;
+    }
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 void FlipSim::calculatePressure(real _dt)
 {
@@ -242,59 +256,9 @@ void FlipSim::calculatePressure(real _dt)
                     uint n_NonSolidNeighbors = 0;
                     int * neighbor = m_Grid.getNeighbors(m_Grid.getCell(i, j, k));
 
-                    if(m_Grid.m_cells[neighbor[LEFT]].type != SOLID)
-                    {
-                        if(m_Grid.m_cells[neighbor[LEFT]].type == FLUID)
-                        {
-                            A.insert(fluidIDXs[neighbor[LEFT]], idx) = scale;
-                        }
-                        n_NonSolidNeighbors++;
-                    }
-
-                    if(m_Grid.m_cells[neighbor[RIGHT]].type != SOLID)
-                    {
-                        if(m_Grid.m_cells[neighbor[RIGHT]].type == FLUID)
-                        {
-                            A.insert(fluidIDXs[neighbor[RIGHT]], idx) = scale;
-                        }
-                        n_NonSolidNeighbors++;
-                    }
-
-                    if(m_Grid.m_cells[neighbor[DOWN]].type != SOLID)
-                    {
-                        if(m_Grid.m_cells[neighbor[DOWN]].type == FLUID)
-                        {
-                            A.insert(fluidIDXs[neighbor[DOWN]], idx) = scale;
-                        }
-                        n_NonSolidNeighbors++;
-                    }
-
-                    if(m_Grid.m_cells[neighbor[UP]].type != SOLID)
-                    {
-                        if(m_Grid.m_cells[neighbor[UP]].type == FLUID)
-                        {
-                            A.insert(fluidIDXs[neighbor[UP]], idx) = scale;
-                        }
-                        n_NonSolidNeighbors++;
-                    }
-
-                    if(m_Grid.m_cells[neighbor[BACKWARD]].type != SOLID)
-                    {
-                        if(m_Grid.m_cells[neighbor[BACKWARD]].type == FLUID)
-                        {
-                            A.insert(fluidIDXs[neighbor[BACKWARD]], idx) = scale;
-                        }
-                        n_NonSolidNeighbors++;
-                    }
-
-                    if(m_Grid.m_cells[neighbor[FORWARD]].type != SOLID)
-                    {
-                        if(m_Grid.m_cells[neighbor[FORWARD]].type == FLUID)
-                        {
-                            A.insert(fluidIDXs[neighbor[FORWARD]], idx) = scale;
-                        }
-                        n_NonSolidNeighbors++;
-                    }
+                    //configure laplacian matrix
+                    for(int i = 0; i < 6; i++)
+                        calculateNeighborLaplacian(idx, neighbor[i], scale, fluidIDXs, A, n_NonSolidNeighbors);
 
                     A.coeffRef(idx, idx) = -n_NonSolidNeighbors*scale;
 

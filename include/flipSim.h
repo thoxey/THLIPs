@@ -49,6 +49,14 @@ private:
     //----------------------------------------------------------------------------------------------------------------------
     void enforceDirichlet();
     //----------------------------------------------------------------------------------------------------------------------
+    /// @brief Calculate a neighbors entry in the laplacian matrix
+    /// @param
+    /// @param
+    /// @param
+    /// @param
+    //----------------------------------------------------------------------------------------------------------------------
+    void calculateNeighborLaplacian(uint _idx, uint _neighborIdx, real _scale, std::vector<int> _fluidIDXs, Eigen::SparseMatrix<real> &_A, uint &_nonSolidNeighbors);
+    //----------------------------------------------------------------------------------------------------------------------
     /// @brief Calculate the pressure in the cells
     /// @param real _dt : The real time passed since the last step
     //----------------------------------------------------------------------------------------------------------------------

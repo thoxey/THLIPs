@@ -17,7 +17,7 @@
 
 int main()
 {
-    feenableexcept(FE_INVALID | FE_OVERFLOW | FE_DIVBYZERO | FE_UNDERFLOW);
+    //feenableexcept(FE_OVERFLOW | FE_DIVBYZERO | FE_UNDERFLOW);
     std::cout<<"Starting THLIPs... \n";
 
     FlipSim flipSim = FlipSim(10, 0.1, uvec3(0, 5, 0), uvec3(10,10,10));
