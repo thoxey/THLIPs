@@ -203,7 +203,17 @@ void FlipSim::enforceDirichlet()
         }
     }
 }
-
+//----------------------------------------------------------------------------------------------------------------------
+void FlipSim::computeDensities()
+{
+    for(auto&& c : m_Grid.m_cells)
+    {
+        real alpha = (m_density - m_airDensity)/m_airDensity;
+        //DO THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        c.setDensity();
+    }
+}
+//----------------------------------------------------------------------------------------------------------------------
 void FlipSim::calculateNeighborLaplacian(uint _idx, uint _neighborIdx, real _scale, std::vector<int> _fluidIDXs, Eigen::SparseMatrix<real> &_A, uint &_nonSolidNeighbors)
 {
     if(m_Grid.m_cells[_neighborIdx].type != SOLID)
@@ -293,17 +303,11 @@ void FlipSim::calculatePressure(real _dt)
         }
     }
 
-    Eigen::SimplicialLLT<Eigen::SparseMatrix<real>> solver;
+    Eigen::ConjugateGradient<Eigen::SparseMatrix<real>> solver;
     //To store the result in
     VectorX p(n_fluidCells);
     solver.compute(A);
     p = solver.solve(b);
-
-//    for(uint i = 0; i<p.rows(); i++)
-//    {
-//        if(isnan(p(i)))
-//            p(i) = 0;
-//    }
 
     for(uint k = 0; k < m_gridLength; k++)
     {

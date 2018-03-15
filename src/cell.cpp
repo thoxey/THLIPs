@@ -64,3 +64,13 @@ vec3 Cell::getVelField() const
 {
     return velField;
 }
+
+real Cell::getDensity() const
+{
+    return density;
+}
+
+void Cell::setDensity(const real &value)
+{
+    density = value;
+}
